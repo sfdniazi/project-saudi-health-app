@@ -5,8 +5,89 @@ import '../widgets/custom_appbar.dart';
 import '../../core/app_theme.dart';
 import 'meal_detail_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  bool _notificationsEnabled = true;
+
+  void _showNotificationSettings() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Notification Settings'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SwitchListTile(
+              title: const Text('Meal Reminders'),
+              subtitle: const Text('Get notified about meal times'),
+              value: _notificationsEnabled,
+              onChanged: (value) {
+                setState(() {
+                  _notificationsEnabled = value;
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      value ? 'Meal reminders enabled' : 'Meal reminders disabled',
+                    ),
+                    backgroundColor: AppTheme.primaryGreen,
+                  ),
+                );
+              },
+            ),
+            SwitchListTile(
+              title: const Text('Water Reminders'),
+              subtitle: const Text('Stay hydrated throughout the day'),
+              value: _notificationsEnabled,
+              onChanged: (value) {
+                setState(() {
+                  _notificationsEnabled = value;
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      value ? 'Water reminders enabled' : 'Water reminders disabled',
+                    ),
+                    backgroundColor: AppTheme.accentBlue,
+                  ),
+                );
+              },
+            ),
+            SwitchListTile(
+              title: const Text('Goal Achievements'),
+              subtitle: const Text('Celebrate your milestones'),
+              value: _notificationsEnabled,
+              onChanged: (value) {
+                setState(() {
+                  _notificationsEnabled = value;
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      value ? 'Goal notifications enabled' : 'Goal notifications disabled',
+                    ),
+                    backgroundColor: AppTheme.accentBlack,
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,12 +126,17 @@ class HomeScreen extends StatelessWidget {
       body: Column(
         children: [
           // Custom app bar
-          const CustomAppBar(
+          CustomAppBar(
             title: 'Nabd Al-Hayah',
             actions: [
               IconButton(
-                icon: Icon(Icons.notifications_outlined),
-                onPressed: null,
+                icon: Icon(
+                  _notificationsEnabled 
+                    ? Icons.notifications_active 
+                    : Icons.notifications_outlined,
+                  color: _notificationsEnabled ? AppTheme.primaryGreen : Colors.white,
+                ),
+                onPressed: _showNotificationSettings,
               ),
             ],
           ),
@@ -102,29 +188,29 @@ class HomeScreen extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                                                     Text(
-                             'Nabd',
-                             style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                               color: Colors.white,
-                               fontSize: 32,
-                               fontWeight: FontWeight.w800,
-                             ),
-                           ),
-                           const SizedBox(width: 8),
-                           const Icon(
-                             Icons.favorite,
-                             color: Colors.white,
-                             size: 32,
-                           ),
-                           const SizedBox(width: 8),
-                           Text(
-                             'Al-Hayah',
-                             style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                               color: Colors.white,
-                               fontSize: 32,
-                               fontWeight: FontWeight.w800,
-                             ),
-                           ),
+                          Text(
+                            'Nabd',
+                            style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                              color: Colors.white,
+                              fontSize: 32,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Icon(
+                            Icons.favorite,
+                            color: Colors.white,
+                            size: 32,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Al-Hayah',
+                            style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                              color: Colors.white,
+                              fontSize: 32,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
                         ],
                       ),
                       
@@ -156,8 +242,8 @@ class HomeScreen extends StatelessWidget {
                         ),
                         child: Row(
                           children: [
-                            Icon(
-                              Icons.emoji_waving_hand,
+                            const Icon(
+                              Icons.waving_hand,
                               color: Colors.white,
                               size: 20,
                             ),

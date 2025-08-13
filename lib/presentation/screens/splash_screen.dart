@@ -2,7 +2,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../core/app_theme.dart';
-import '../screens/main_navigation_wrapper.dart';
+import 'main_navigation_wrapper.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -177,14 +177,14 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                         const SizedBox(height: 32),
                         
                         // Loading indicator
-                        Container(
-                          width: 40,
-                          height: 40,
-                          child: CircularProgressIndicator(
-                            color: Colors.white.withValues(alpha: 0.8),
-                            strokeWidth: 3,
-                          ),
-                        ),
+                                                 SizedBox(
+                           width: 40,
+                           height: 40,
+                           child: CircularProgressIndicator(
+                             color: Colors.white.withValues(alpha: 0.8),
+                             strokeWidth: 3,
+                           ),
+                         ),
                         
                         const SizedBox(height: 24),
                         

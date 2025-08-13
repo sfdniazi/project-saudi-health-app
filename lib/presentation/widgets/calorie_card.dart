@@ -236,7 +236,7 @@ class _CalorieCardState extends State<CalorieCard> with SingleTickerProviderStat
             ),
             child: Row(
               children: [
-                Icon(
+                const Icon(
                   Icons.emoji_events,
                   color: Colors.white,
                   size: 20,

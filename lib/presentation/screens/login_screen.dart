@@ -4,7 +4,7 @@ import '../navigation/main_navigation.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
-  
+
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
@@ -13,11 +13,11 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  
+
   bool _isPasswordVisible = false;
   bool _isLoading = false;
   bool _isSignUp = false;
-  
+
   late AnimationController _fadeController;
   late AnimationController _slideController;
   late Animation<double> _fadeAnimation;
@@ -34,23 +34,14 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       duration: const Duration(milliseconds: 600),
       vsync: this,
     );
-    
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeInOut,
-    ));
-    
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _slideController,
-      curve: Curves.easeOutCubic,
-    ));
-    
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
+    );
+
+    _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic));
+
     _fadeController.forward();
     _slideController.forward();
   }
@@ -65,33 +56,21 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   }
 
   void _togglePasswordVisibility() {
-    setState(() {
-      _isPasswordVisible = !_isPasswordVisible;
-    });
+    setState(() => _isPasswordVisible = !_isPasswordVisible);
   }
 
   void _toggleMode() {
-    setState(() {
-      _isSignUp = !_isSignUp;
-    });
+    setState(() => _isSignUp = !_isSignUp);
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    
-    setState(() {
-      _isLoading = true;
-    });
-    
-    // Simulate API call
-    await Future.delayed(const Duration(seconds: 1));
-    
+
+    setState(() => _isLoading = true);
+    await Future.delayed(const Duration(milliseconds: 800));
+
     if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
-      
-      // Navigate to main navigation
+      setState(() => _isLoading = false);
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const MainNavigation()),
       );
@@ -102,13 +81,11 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppTheme.headerGradient,
-        ),
+        decoration: const BoxDecoration(gradient: AppTheme.headerGradient),
         child: SafeArea(
           child: Column(
             children: [
-              // Top section with logo and welcome text
+              // Top section
               Expanded(
                 flex: 2,
                 child: FadeTransition(
@@ -116,7 +93,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // App logo/icon
                       Container(
                         width: 80,
                         height: 80,
@@ -128,26 +104,19 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                             width: 2,
                           ),
                         ),
-                        child: const Icon(
-                          Icons.restaurant_menu,
+                        child: const Icon(Icons.restaurant_menu,
+                            color: Colors.white, size: 40),
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        'Nabd Al-Hayah',
+                        style: Theme.of(context).textTheme.displayLarge?.copyWith(
                           color: Colors.white,
-                          size: 40,
+                          fontSize: 36,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
-                      
-                      const SizedBox(height: 24),
-                      
-                                                        Text(
-                                    'Nabd Al-Hayah',
-                                    style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                                      color: Colors.white,
-                                      fontSize: 36,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                      
                       const SizedBox(height: 8),
-                      
                       Text(
                         _isSignUp ? 'Create your account' : 'Welcome back!',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -155,13 +124,11 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                           fontSize: 18,
                         ),
                       ),
-                      
                       const SizedBox(height: 4),
-                      
                       Text(
-                        _isSignUp 
-                          ? 'Start your healthy journey today'
-                          : 'Sign in to continue tracking your nutrition',
+                        _isSignUp
+                            ? 'Start your healthy journey today'
+                            : 'Sign in to continue tracking your nutrition',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Colors.white.withValues(alpha: 0.7),
                           fontSize: 14,
@@ -172,7 +139,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                   ),
                 ),
               ),
-              
+
               // Form section
               Expanded(
                 flex: 3,
@@ -190,99 +157,137 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                       opacity: _fadeAnimation,
                       child: Padding(
                         padding: const EdgeInsets.all(32),
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              // Email field
-                              _buildTextField(
-                                controller: _emailCtrl,
-                                label: 'Email',
-                                hint: 'Enter your email',
-                                icon: Icons.email_outlined,
-                                keyboardType: TextInputType.emailAddress,
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Please enter your email';
-                                  }
-                                  if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                                    return 'Please enter a valid email';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              
-                              const SizedBox(height: 20),
-                              
-                              // Password field
-                              _buildTextField(
-                                controller: _passCtrl,
-                                label: 'Password',
-                                hint: 'Enter your password',
-                                icon: Icons.lock_outlined,
-                                isPassword: true,
-                                isPasswordVisible: _isPasswordVisible,
-                                onTogglePassword: _togglePasswordVisibility,
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Please enter your password';
-                                  }
-                                  if (value.length < 6) {
-                                    return 'Password must be at least 6 characters';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              
-                              const SizedBox(height: 24),
-                              
-                              // Submit button
-                              _buildSubmitButton(),
-                              
-                              const SizedBox(height: 20),
-                              
-                              // Mode toggle
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    _isSignUp 
-                                      ? 'Already have an account? '
-                                      : 'Don\'t have an account? ',
-                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      color: AppTheme.textSecondary,
-                                    ),
-                                  ),
-                                  GestureDetector(
-                                    onTap: _toggleMode,
-                                    child: Text(
-                                      _isSignUp ? 'Sign In' : 'Sign Up',
-                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        color: AppTheme.primaryGreen,
-                                        fontWeight: FontWeight.w600,
+                        child: SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _buildTextField(
+                                  controller: _emailCtrl,
+                                  label: 'Email',
+                                  hint: 'Enter your email',
+                                  icon: Icons.email_outlined,
+                                  keyboardType: TextInputType.emailAddress,
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Please enter your email';
+                                    }
+                                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                                        .hasMatch(value)) {
+                                      return 'Please enter a valid email';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 20),
+                                _buildTextField(
+                                  controller: _passCtrl,
+                                  label: 'Password',
+                                  hint: 'Enter your password',
+                                  icon: Icons.lock_outlined,
+                                  isPassword: true,
+                                  isPasswordVisible: _isPasswordVisible,
+                                  onTogglePassword: _togglePasswordVisibility,
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Please enter your password';
+                                    }
+                                    if (value.length < 6) {
+                                      return 'Password must be at least 6 characters';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 24),
+                                _buildSubmitButton(),
+                                const SizedBox(height: 20),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      _isSignUp
+                                          ? 'Already have an account? '
+                                          : 'Don\'t have an account? ',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                        color: AppTheme.textSecondary,
                                       ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                              
-                              const SizedBox(height: 16),
-                              
-                              // Demo skip button
-                              Center(
-                                child: TextButton(
-                                  onPressed: _submit,
-                                  child: Text(
-                                    'Demo Mode - Skip Authentication',
-                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      color: AppTheme.textLight,
-                                      decoration: TextDecoration.underline,
+                                    GestureDetector(
+                                      onTap: _toggleMode,
+                                      child: Text(
+                                        _isSignUp ? 'Sign In' : 'Sign Up',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.copyWith(
+                                          color: AppTheme.primaryGreen,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
                                     ),
-                                  ),
+                                  ],
                                 ),
-                              ),
-                            ],
+                                const SizedBox(height: 16),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      'By continuing, you agree to our ',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                        color: AppTheme.textSecondary,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    GestureDetector(
+                                      onTap: () {},
+                                      child: Text(
+                                        'Terms',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                          color: AppTheme.primaryGreen,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                    Text(
+                                      ' and ',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                        color: AppTheme.textSecondary,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    GestureDetector(
+                                      onTap: () {},
+                                      child: Text(
+                                        'Privacy Policy',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                          color: AppTheme.primaryGreen,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -334,26 +339,20 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
           labelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: AppTheme.textSecondary,
           ),
-          prefixIcon: Icon(
-            icon,
-            color: AppTheme.textSecondary,
-            size: 20,
-          ),
+          prefixIcon: Icon(icon, color: AppTheme.textSecondary, size: 20),
           suffixIcon: isPassword
               ? IconButton(
-                  onPressed: onTogglePassword,
-                  icon: Icon(
-                    isPasswordVisible ? Icons.visibility : Icons.visibility_off,
-                    color: AppTheme.textSecondary,
-                    size: 20,
-                  ),
-                )
+            onPressed: onTogglePassword,
+            icon: Icon(
+              isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+              color: AppTheme.textSecondary,
+              size: 20,
+            ),
+          )
               : null,
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 16,
-          ),
+          contentPadding:
+          const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         ),
       ),
     );
@@ -378,26 +377,25 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
         child: _isLoading
             ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2,
-                ),
-              )
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(
+            color: Colors.white,
+            strokeWidth: 2,
+          ),
+        )
             : Text(
-                _isSignUp ? 'Create Account' : 'Sign In',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+          _isSignUp ? 'Create Account' : 'Sign In',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }

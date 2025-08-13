@@ -34,7 +34,7 @@ class StatisticsScreen extends StatelessWidget {
                     borderData: FlBorderData(show: false),
                     gridData: FlGridData(show: false),
                     titlesData: FlTitlesData(
-                      bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, getTitlesWidget: (v, meta) {
+                      bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: true,                       getTitlesWidget: (v, meta) {
                         const labels = ['M','T','W','T','F','S','S'];
                         return Text(labels[v.toInt() % labels.length]);
                       })),

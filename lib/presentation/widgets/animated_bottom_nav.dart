@@ -21,7 +21,7 @@ class AnimatedBottomNav extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 20,
             offset: const Offset(0, -8),
           ),
@@ -85,11 +85,11 @@ class AnimatedBottomNav extends StatelessWidget {
           vertical: active ? 12 : 8,
         ),
         decoration: BoxDecoration(
-          color: active ? AppTheme.primaryGreen.withOpacity(0.15) : Colors.transparent,
+          color: active ? AppTheme.primaryGreen.withValues(alpha: 0.15) : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
           border: active
               ? Border.all(
-                  color: AppTheme.primaryGreen.withOpacity(0.3),
+                  color: AppTheme.primaryGreen.withValues(alpha: 0.3),
                   width: 1,
                 )
               : null,
@@ -104,14 +104,14 @@ class AnimatedBottomNav extends StatelessWidget {
             ),
             if (active) ...[
               const SizedBox(width: 8),
-              Text(
-                label,
-                style: TextStyle(
-                  color: AppTheme.primaryGreen,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-              ),
+                             Text(
+                 label,
+                 style: TextStyle(
+                   color: AppTheme.primaryGreen,
+                   fontWeight: FontWeight.w600,
+                   fontSize: 14,
+                 ),
+               ),
             ],
           ],
         ),

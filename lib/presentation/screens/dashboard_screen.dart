@@ -6,8 +6,89 @@ import '../widgets/meal_card.dart';
 import '../../core/app_theme.dart';
 import 'meal_detail_screen.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  bool _notificationsEnabled = true;
+
+  void _showNotificationSettings() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Notification Settings'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SwitchListTile(
+              title: const Text('Meal Reminders'),
+              subtitle: const Text('Get notified about meal times'),
+              value: _notificationsEnabled,
+              onChanged: (value) {
+                setState(() {
+                  _notificationsEnabled = value;
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      value ? 'Meal reminders enabled' : 'Meal reminders disabled',
+                    ),
+                    backgroundColor: AppTheme.primaryGreen,
+                  ),
+                );
+              },
+            ),
+            SwitchListTile(
+              title: const Text('Water Reminders'),
+              subtitle: const Text('Stay hydrated throughout the day'),
+              value: _notificationsEnabled,
+              onChanged: (value) {
+                setState(() {
+                  _notificationsEnabled = value;
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      value ? 'Water reminders enabled' : 'Water reminders disabled',
+                    ),
+                    backgroundColor: AppTheme.accentBlue,
+                  ),
+                );
+              },
+            ),
+            SwitchListTile(
+              title: const Text('Goal Achievements'),
+              subtitle: const Text('Celebrate your milestones'),
+              value: _notificationsEnabled,
+              onChanged: (value) {
+                setState(() {
+                  _notificationsEnabled = value;
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      value ? 'Goal notifications enabled' : 'Goal notifications disabled',
+                    ),
+                    backgroundColor: AppTheme.accentBlack,
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,13 +120,18 @@ class DashboardScreen extends StatelessWidget {
       body: Column(
         children: [
           // Custom app bar
-          const CustomAppBar(
-            title: 'Dashboard',
+          CustomAppBar(
+            title: 'Overview',
             showProfile: false,
             actions: [
               IconButton(
-                icon: Icon(Icons.notifications_outlined),
-                onPressed: null,
+                icon: Icon(
+                  _notificationsEnabled 
+                    ? Icons.notifications_active 
+                    : Icons.notifications_outlined,
+                  color: _notificationsEnabled ? AppTheme.primaryGreen : Colors.white,
+                ),
+                onPressed: _showNotificationSettings,
               ),
             ],
           ),
@@ -97,29 +183,29 @@ class DashboardScreen extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                                                     Text(
-                             'Nabd',
-                             style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                               color: Colors.white,
-                               fontSize: 32,
-                               fontWeight: FontWeight.w800,
-                             ),
-                           ),
-                           const SizedBox(width: 8),
-                           const Icon(
-                             Icons.favorite,
-                             color: Colors.white,
-                             size: 32,
-                           ),
-                           const SizedBox(width: 8),
-                           Text(
-                             'Al-Hayah',
-                             style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                               color: Colors.white,
-                               fontSize: 32,
-                               fontWeight: FontWeight.w800,
-                             ),
-                           ),
+                          Text(
+                            'Nabd',
+                            style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                              color: Colors.white,
+                              fontSize: 32,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Icon(
+                            Icons.favorite,
+                            color: Colors.white,
+                            size: 32,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Al-Hayah',
+                            style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                              color: Colors.white,
+                              fontSize: 32,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
                         ],
                       ),
                       
@@ -151,8 +237,8 @@ class DashboardScreen extends StatelessWidget {
                         ),
                         child: Row(
                           children: [
-                            Icon(
-                              Icons.emoji_waving_hand,
+                            const Icon(
+                              Icons.waving_hand,
                               color: Colors.white,
                               size: 20,
                             ),
@@ -205,7 +291,14 @@ class DashboardScreen extends StatelessWidget {
                               color: AppTheme.accentBlack,
                               icon: Icons.fitness_center,
                               progress: 0.75,
-                              onTap: () {},
+                              onTap: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Protein tracking details'),
+                                    backgroundColor: AppTheme.accentBlack,
+                                  ),
+                                );
+                              },
                             ),
                           ),
                           const SizedBox(width: 16),
@@ -218,7 +311,14 @@ class DashboardScreen extends StatelessWidget {
                               color: AppTheme.accentBlue,
                               icon: Icons.grain,
                               progress: 0.84,
-                              onTap: () {},
+                              onTap: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Carbohydrate tracking details'),
+                                    backgroundColor: AppTheme.accentBlue,
+                                  ),
+                                );
+                              },
                             ),
                           ),
                         ],
@@ -237,7 +337,14 @@ class DashboardScreen extends StatelessWidget {
                               color: AppTheme.accentOrange,
                               icon: Icons.water_drop,
                               progress: 0.60,
-                              onTap: () {},
+                              onTap: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Fat tracking details'),
+                                    backgroundColor: AppTheme.accentOrange,
+                                  ),
+                                );
+                              },
                             ),
                           ),
                           const SizedBox(width: 16),
@@ -250,7 +357,14 @@ class DashboardScreen extends StatelessWidget {
                               color: AppTheme.primaryGreen,
                               icon: Icons.eco,
                               progress: 0.70,
-                              onTap: () {},
+                              onTap: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Fiber tracking details'),
+                                    backgroundColor: AppTheme.primaryGreen,
+                                  ),
+                                );
+                              },
                             ),
                           ),
                         ],

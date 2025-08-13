@@ -33,12 +33,12 @@ class AppTheme {
   );
 
   static ThemeData lightTheme = ThemeData(
-    scaffoldBackgroundColor: background,
+    scaffoldBackgroundColor: surfaceLight,
     primaryColor: primaryGreen,
     colorScheme: ColorScheme.fromSwatch().copyWith(
       secondary: secondaryGreen,
       surface: surfaceLight,
-      background: background,
+      background: surfaceLight,
     ),
     textTheme: GoogleFonts.interTextTheme().copyWith(
       displayLarge: GoogleFonts.inter(
