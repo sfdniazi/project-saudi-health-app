@@ -1,5 +1,5 @@
 name: nabd_al_hayah
-description: Nabd Al-Hayah - Your Personal Nutrition Companion 
+description: Nabd Al-Hayah - Your Personal Nutrition Companion
 publish_to: "none"
 version: 1.0.0+1
 
@@ -15,14 +15,29 @@ dependencies:
   percent_indicator: ^4.2.2
   fl_chart: ^0.65.0
 
+  # ✅ Firebase dependencies
+  firebase_core: ^2.24.2
+  firebase_auth: ^4.16.0
+  cloud_firestore: ^4.17.3   # <-- Added Firestore
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^2.0.0
 
+  # ✅ Add flutter_launcher_icons package
+  flutter_launcher_icons: ^0.13.1
+
 flutter:
   uses-material-design: true
 
-  # if you want to use a local logo put it here:
   assets:
     - assets/images/
+
+# ✅ Flutter Launcher Icons Configuration
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/images/app_icon.png"   # place your 1024x1024 logo here
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/images/app_icon.png"

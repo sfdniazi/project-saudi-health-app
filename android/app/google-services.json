@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "662403799759",
+    "project_id": "nabd-al-hayah",
+    "storage_bucket": "nabd-al-hayah.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:662403799759:android:ba52723e378743320875ba",
+        "android_client_info": {
+          "package_name": "com.sfd.nabdalhayah"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "662403799759-jn7e71obeuim0giuf1r18mv6m91c00bp.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAj9I-snP24SkX7E8B5Xj5S007yCnWvqYE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "662403799759-jn7e71obeuim0giuf1r18mv6m91c00bp.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "662403799759-a6u0j0v7m1v0g56nj0f5c4k6nu7oja7g.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.nabdAlHayah"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

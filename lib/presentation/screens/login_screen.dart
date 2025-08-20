@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // 👈 Firestore
 import '../../core/app_theme.dart';
 import '../navigation/main_navigation.dart';
 
@@ -23,17 +25,14 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
+  // 🔥 Firestore instance
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
   @override
   void initState() {
     super.initState();
-    _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-    _slideController = AnimationController(
-      duration: const Duration(milliseconds: 600),
-      vsync: this,
-    );
+    _fadeController = AnimationController(duration: const Duration(milliseconds: 800), vsync: this);
+    _slideController = AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
@@ -63,16 +62,105 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     setState(() => _isSignUp = !_isSignUp);
   }
 
+  /// ✅ Ensure a users/{uid} document exists with sane defaults
+  Future<void> _ensureUserProfile(User user) async {
+    final docRef = _firestore.collection('users').doc(user.uid);
+    final snap = await docRef.get();
+
+    final email = user.email ?? '';
+    final derivedName = (user.displayName?.trim().isNotEmpty == true)
+        ? user.displayName!.trim()
+        : (email.contains('@') ? email.split('@').first : 'User');
+
+    if (!snap.exists) {
+      await docRef.set({
+        'email': email,
+        'displayName': derivedName,
+        'age': 25,            // default, user can edit later
+        'height': 170.0,      // cm
+        'idealWeight': 65.0,  // kg
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } else {
+      // Touch updatedAt so we know profile is valid
+      await docRef.set({
+        'updatedAt': FieldValue.serverTimestamp(),
+        if (snap.data()!['email'] == null) 'email': email,
+        if (snap.data()!['displayName'] == null) 'displayName': derivedName,
+      }, SetOptions(merge: true));
+    }
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(milliseconds: 800));
 
-    if (mounted) {
-      setState(() => _isLoading = false);
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const MainNavigation()),
+    try {
+      final auth = FirebaseAuth.instance;
+      UserCredential cred;
+
+      if (_isSignUp) {
+        cred = await auth.createUserWithEmailAndPassword(
+          email: _emailCtrl.text.trim(),
+          password: _passCtrl.text.trim(),
+        );
+      } else {
+        cred = await auth.signInWithEmailAndPassword(
+          email: _emailCtrl.text.trim(),
+          password: _passCtrl.text.trim(),
+        );
+      }
+
+      final user = cred.user;
+      if (user != null) {
+        // 👇 Create users/{uid} if missing (or fix minimal fields)
+        await _ensureUserProfile(user);
+      }
+
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const MainNavigation()),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      String message = 'An error occurred';
+      if (e.code == 'user-not-found') {
+        message = 'No user found for that email.';
+      } else if (e.code == 'wrong-password') {
+        message = 'Wrong password provided.';
+      } else if (e.code == 'email-already-in-use') {
+        message = 'That email is already registered.';
+      } else if (e.code == 'invalid-email') {
+        message = 'Invalid email format.';
+      } else if (e.code == 'weak-password') {
+        message = 'Password should be at least 6 characters.';
+      }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _resetPassword() async {
+    if (_emailCtrl.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Enter your email to reset password")),
+      );
+      return;
+    }
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(
+        email: _emailCtrl.text.trim(),
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Password reset email sent!")),
+      );
+    } on FirebaseAuthException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: ${e.message}")),
       );
     }
   }
@@ -104,8 +192,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                             width: 2,
                           ),
                         ),
-                        child: const Icon(Icons.restaurant_menu,
-                            color: Colors.white, size: 40),
+                        child: const Icon(Icons.restaurant_menu, color: Colors.white, size: 40),
                       ),
                       const SizedBox(height: 24),
                       Text(
@@ -174,8 +261,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                     if (value == null || value.isEmpty) {
                                       return 'Please enter your email';
                                     }
-                                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                                        .hasMatch(value)) {
+                                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
                                       return 'Please enter a valid email';
                                     }
                                     return null;
@@ -200,20 +286,33 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                     return null;
                                   },
                                 ),
-                                const SizedBox(height: 24),
+                                const SizedBox(height: 16),
+
+                                // Forgot password
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton(
+                                    onPressed: _resetPassword,
+                                    child: const Text(
+                                      "Forgot Password?",
+                                      style: TextStyle(
+                                        color: AppTheme.primaryGreen,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                                const SizedBox(height: 8),
                                 _buildSubmitButton(),
                                 const SizedBox(height: 20),
+
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Text(
-                                      _isSignUp
-                                          ? 'Already have an account? '
-                                          : 'Don\'t have an account? ',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium
-                                          ?.copyWith(
+                                      _isSignUp ? 'Already have an account? ' : 'Don\'t have an account? ',
+                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                         color: AppTheme.textSecondary,
                                       ),
                                     ),
@@ -221,65 +320,8 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                       onTap: _toggleMode,
                                       child: Text(
                                         _isSignUp ? 'Sign In' : 'Sign Up',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium
-                                            ?.copyWith(
+                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                           color: AppTheme.primaryGreen,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 16),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      'By continuing, you agree to our ',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall
-                                          ?.copyWith(
-                                        color: AppTheme.textSecondary,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                    GestureDetector(
-                                      onTap: () {},
-                                      child: Text(
-                                        'Terms',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall
-                                            ?.copyWith(
-                                          color: AppTheme.primaryGreen,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                    Text(
-                                      ' and ',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall
-                                          ?.copyWith(
-                                        color: AppTheme.textSecondary,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                    GestureDetector(
-                                      onTap: () {},
-                                      child: Text(
-                                        'Privacy Policy',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall
-                                            ?.copyWith(
-                                          color: AppTheme.primaryGreen,
-                                          fontSize: 12,
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
@@ -351,8 +393,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
           )
               : null,
           border: InputBorder.none,
-          contentPadding:
-          const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         ),
       ),
     );
@@ -377,8 +418,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
-          shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
         child: _isLoading
             ? const SizedBox(
