@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // 👈 Firestore
 import '../../core/app_theme.dart';
 import '../navigation/main_navigation.dart';
+import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -18,7 +19,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
 
   bool _isPasswordVisible = false;
   bool _isLoading = false;
-  bool _isSignUp = false;
 
   late AnimationController _fadeController;
   late AnimationController _slideController;
@@ -58,9 +58,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     setState(() => _isPasswordVisible = !_isPasswordVisible);
   }
 
-  void _toggleMode() {
-    setState(() => _isSignUp = !_isSignUp);
-  }
 
   /// ✅ Ensure a users/{uid} document exists with sane defaults
   Future<void> _ensureUserProfile(User user) async {
@@ -101,22 +98,16 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       final auth = FirebaseAuth.instance;
       UserCredential cred;
 
-      if (_isSignUp) {
-        cred = await auth.createUserWithEmailAndPassword(
-          email: _emailCtrl.text.trim(),
-          password: _passCtrl.text.trim(),
-        );
-      } else {
-        cred = await auth.signInWithEmailAndPassword(
-          email: _emailCtrl.text.trim(),
-          password: _passCtrl.text.trim(),
-        );
-      }
+      cred = await auth.signInWithEmailAndPassword(
+        email: _emailCtrl.text.trim(),
+        password: _passCtrl.text.trim(),
+      );
 
       final user = cred.user;
       if (user != null) {
         // 👇 Create users/{uid} if missing (or fix minimal fields)
         await _ensureUserProfile(user);
+        
       }
 
       if (mounted) {
@@ -205,7 +196,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        _isSignUp ? 'Create your account' : 'Welcome back!',
+                        'Welcome back!',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           color: Colors.white.withValues(alpha: 0.9),
                           fontSize: 18,
@@ -213,9 +204,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        _isSignUp
-                            ? 'Start your healthy journey today'
-                            : 'Sign in to continue tracking your nutrition',
+                        'Sign in to continue tracking your nutrition',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Colors.white.withValues(alpha: 0.7),
                           fontSize: 14,
@@ -311,15 +300,19 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Text(
-                                      _isSignUp ? 'Already have an account? ' : 'Don\'t have an account? ',
+                                      'Don\'t have an account? ',
                                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                         color: AppTheme.textSecondary,
                                       ),
                                     ),
                                     GestureDetector(
-                                      onTap: _toggleMode,
+                                      onTap: () {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(builder: (_) => const SignUpScreen()),
+                                        );
+                                      },
                                       child: Text(
-                                        _isSignUp ? 'Sign In' : 'Sign Up',
+                                        'Sign Up',
                                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                           color: AppTheme.primaryGreen,
                                           fontWeight: FontWeight.w600,
@@ -430,7 +423,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
           ),
         )
             : Text(
-          _isSignUp ? 'Create Account' : 'Sign In',
+          'Sign In',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
             color: Colors.white,
             fontWeight: FontWeight.w600,

@@ -1,0 +1,40 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow read/write access to user profile documents only for the authenticated user
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // User activity subcollection - only accessible by the user
+      match /activity/{activityId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      // User hydration subcollection - only accessible by the user
+      match /hydration/{hydrationId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      // User food logs subcollection - only accessible by the user
+      match /food_logs/{foodLogId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      // User recommendations subcollection - only accessible by the user
+      match /recommendations/{recommendationId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+    
+    // Public food database (read-only) - for barcode scanning
+    match /food_database/{foodId} {
+      allow read: if request.auth != null;
+      allow write: if false; // Only admins can write to food database
+    }
+    
+    // Deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

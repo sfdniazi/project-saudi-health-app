@@ -3,8 +3,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class UserModel {
   final String uid;
   final String email;
-  final String? displayName;
+  final String displayName;
   final int age;
+  final String gender;
   final double height; // in cm
   final double weight; // in kg
   final double idealWeight; // in kg
@@ -17,8 +18,9 @@ class UserModel {
   UserModel({
     required this.uid,
     required this.email,
-    this.displayName,
+    this.displayName = '',
     this.age = 0,
+    this.gender = 'Male',
     this.height = 0.0,
     this.weight = 0.0,
     this.idealWeight = 0.0,
@@ -36,6 +38,7 @@ class UserModel {
       'email': email,
       'displayName': displayName,
       'age': age,
+      'gender': gender,
       'height': height,
       'weight': weight,
       'idealWeight': idealWeight,
@@ -52,8 +55,9 @@ class UserModel {
     return UserModel(
       uid: map['uid'] ?? '',
       email: map['email'] ?? '',
-      displayName: map['displayName'],
+      displayName: map['displayName'] ?? '',
       age: map['age']?.toInt() ?? 0,
+      gender: map['gender'] ?? 'Male',
       height: map['height']?.toDouble() ?? 0.0,
       weight: map['weight']?.toDouble() ?? 0.0,
       idealWeight: map['idealWeight']?.toDouble() ?? 0.0,
@@ -100,6 +104,7 @@ class UserModel {
     String? email,
     String? displayName,
     int? age,
+    String? gender,
     double? height,
     double? weight,
     double? idealWeight,
@@ -114,6 +119,7 @@ class UserModel {
       email: email ?? this.email,
       displayName: displayName ?? this.displayName,
       age: age ?? this.age,
+      gender: gender ?? this.gender,
       height: height ?? this.height,
       weight: weight ?? this.weight,
       idealWeight: idealWeight ?? this.idealWeight,

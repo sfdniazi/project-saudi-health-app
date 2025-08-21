@@ -497,10 +497,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       CircleAvatar(
                         radius: 40,
-                        backgroundImage: const NetworkImage(
-                          'https://cdn3.iconfinder.com/data/icons/avatars-round-flat/33/man5-512.png',
+                        backgroundColor: Colors.white.withOpacity(0.3),
+                        child: Text(
+                          userModel.displayName.isNotEmpty
+                              ? userModel.displayName.substring(0, 1).toUpperCase()
+                              : (user.email?.substring(0, 1).toUpperCase() ?? 'U'),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 28,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
-                        backgroundColor: Colors.white.withOpacity(0.2),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -508,7 +515,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              user?.displayName ?? 'User',
+                              userModel.displayName.isNotEmpty 
+                                  ? userModel.displayName 
+                                  : (user.email?.split('@').first ?? 'User'),
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 22,
@@ -517,7 +526,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              user?.email ?? 'No email',
+                              userModel.email.isNotEmpty 
+                                  ? userModel.email 
+                                  : (user.email ?? 'No email'),
                               style: const TextStyle(
                                 color: Colors.white70,
                                 fontSize: 14,
@@ -602,31 +613,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      NutrientIndicator(
-                        icon: Icons.local_fire_department,
-                        name: 'Calories',
-                        value: 1850.toDouble(),
-                        target: _dailyGoal.toDouble(),
-                        unit: 'kcal',
-                        color: AppTheme.primaryGreen,
+                      // Real-time data indicators
+                      StreamBuilder(
+                        stream: FirebaseService.streamFoodLogData(user.uid, DateTime.now()),
+                        builder: (context, foodSnapshot) {
+                          final todayCalories = foodSnapshot.data?.totalCalories ?? 0.0;
+                          return NutrientIndicator(
+                            icon: Icons.local_fire_department,
+                            name: 'Calories',
+                            value: todayCalories,
+                            target: _dailyGoal.toDouble(),
+                            unit: 'kcal',
+                            color: AppTheme.primaryGreen,
+                          );
+                        },
                       ),
                       const SizedBox(height: 12),
-                      const NutrientIndicator(
-                        icon: Icons.water_drop,
-                        name: 'Water',
-                        value: 2.8,
-                        target: 3.0,
-                        unit: 'L',
-                        color: AppTheme.accentBlue,
+                      StreamBuilder(
+                        stream: FirebaseService.streamHydrationData(user.uid, DateTime.now()),
+                        builder: (context, hydrationSnapshot) {
+                          final todayWater = hydrationSnapshot.data?.waterIntake ?? 0.0;
+                          final goal = hydrationSnapshot.data?.goalAmount ?? 2.5;
+                          return NutrientIndicator(
+                            icon: Icons.water_drop,
+                            name: 'Water',
+                            value: todayWater,
+                            target: goal,
+                            unit: 'L',
+                            color: AppTheme.accentBlue,
+                          );
+                        },
                       ),
                       const SizedBox(height: 12),
-                      NutrientIndicator(
-                        icon: Icons.directions_run,
-                        name: 'Steps',
-                        value: 8500.toDouble(),
-                        target: 10000.toDouble(),
-                        unit: 'steps',
-                        color: AppTheme.accentBlack,
+                      StreamBuilder(
+                        stream: FirebaseService.streamActivityData(user.uid, DateTime.now()),
+                        builder: (context, activitySnapshot) {
+                          final todaySteps = activitySnapshot.data?.steps.toDouble() ?? 0.0;
+                          return NutrientIndicator(
+                            icon: Icons.directions_run,
+                            name: 'Steps',
+                            value: todaySteps,
+                            target: 10000.0,
+                            unit: 'steps',
+                            color: AppTheme.accentBlack,
+                          );
+                        },
                       ),
                     ],
                   ),
