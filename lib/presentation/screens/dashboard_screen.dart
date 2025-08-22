@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/custom_appbar.dart';
 import '../widgets/calorie_card.dart';
 import '../widgets/nutrient_card.dart';
 import '../widgets/meal_card.dart';
 import '../../core/app_theme.dart';
+import '../../models/user_model.dart';
+import '../../models/food_model.dart';
+import '../../services/firebase_service.dart';
 import 'meal_detail_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -141,39 +145,55 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: ListView(
               padding: EdgeInsets.zero,
               children: [
-                // App logo and welcome section
-                Container(
-                  margin: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-                  padding: const EdgeInsets.all(24),
+                // 🎨 Enhanced welcome section with animation
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 600),
+                  curve: Curves.easeOutBack,
+                  margin: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+                  padding: const EdgeInsets.all(28),
                   decoration: BoxDecoration(
                     gradient: AppTheme.primaryGradient,
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(28),
                     boxShadow: [
                       BoxShadow(
-                        color: AppTheme.primaryGreen.withValues(alpha: 0.3),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
+                        color: AppTheme.primaryGreen.withValues(alpha: 0.25),
+                        blurRadius: 24,
+                        offset: const Offset(0, 12),
+                      ),
+                      BoxShadow(
+                        color: AppTheme.primaryGreen.withValues(alpha: 0.1),
+                        blurRadius: 40,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
                   child: Column(
                     children: [
-                      // App logo
-                      Container(
-                        width: 80,
-                        height: 80,
+                      // 🎨 Enhanced app logo with animation
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 800),
+                        curve: Curves.elasticOut,
+                        width: 88,
+                        height: 88,
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(24),
+                          borderRadius: BorderRadius.circular(28),
                           border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.3),
+                            color: Colors.white.withValues(alpha: 0.4),
                             width: 2,
                           ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              blurRadius: 16,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
                         child: const Icon(
                           Icons.restaurant_menu,
                           color: Colors.white,
-                          size: 40,
+                          size: 44,
                         ),
                       ),
                       
@@ -260,8 +280,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
                 
-                // Calorie card
-                const CalorieCard(current: 1300, goal: 2000),
+                // 🎯 Dynamic calorie card from user profile and food log
+                StreamBuilder<UserModel?>(
+                  stream: FirebaseService.streamCurrentUserProfile(),
+                  builder: (context, userSnapshot) {
+                    final userProfile = userSnapshot.data;
+                    final goalCalories = userProfile?.calculatedDailyGoal ?? 2000; // 🎯 Use dynamic goal
+                    
+                    return StreamBuilder<FoodLogModel?>(
+                      stream: FirebaseService.streamFoodLogData(
+                        FirebaseAuth.instance.currentUser?.uid ?? '',
+                        DateTime.now(),
+                      ),
+                      builder: (context, foodSnapshot) {
+                        final currentCalories = foodSnapshot.data?.totalCalories ?? 0.0;
+                        
+                        return CalorieCard(
+                          current: currentCalories.toInt(),
+                          goal: goalCalories,
+                        );
+                      },
+                    );
+                  },
+                ),
                 
                 // Nutrient cards section
                 Padding(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // 👈 Firestore
+import 'package:connectivity_plus/connectivity_plus.dart'; // 📶 Connectivity check
 import '../../core/app_theme.dart';
 import '../navigation/main_navigation.dart';
 import 'signup_screen.dart';
@@ -89,25 +90,61 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     }
   }
 
+  /// ✅ Check internet connectivity before attempting login
+  Future<bool> _checkConnectivity() async {
+    try {
+      final connectivityResult = await (Connectivity().checkConnectivity());
+      return connectivityResult != ConnectivityResult.none;
+    } catch (e) {
+      return false; // Assume no connection if error occurs
+    }
+  }
+
+  /// ✅ Enhanced submit with timeout, connectivity check, and retry option
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
+    // Check connectivity first
+    final hasConnection = await _checkConnectivity();
+    if (!hasConnection) {
+      _showErrorDialog(
+        'No Internet Connection',
+        'Please check your internet connection and try again.',
+        showRetry: true,
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
 
     try {
       final auth = FirebaseAuth.instance;
-      UserCredential cred;
 
-      cred = await auth.signInWithEmailAndPassword(
+      // 🕐 Apply 10-second timeout to the login operation
+      final cred = await auth.signInWithEmailAndPassword(
         email: _emailCtrl.text.trim(),
         password: _passCtrl.text.trim(),
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw Exception('Login timed out. Please try again.');
+        },
       );
 
       final user = cred.user;
       if (user != null) {
         // 👇 Create users/{uid} if missing (or fix minimal fields)
-        await _ensureUserProfile(user);
+        await _ensureUserProfile(user).timeout(
+          const Duration(seconds: 5),
+          onTimeout: () {
+            debugPrint('Profile creation timed out, but user is authenticated');
+            // Continue anyway - profile can be created later
+          },
+        );
         
+        // Login successful
       }
 
       if (mounted) {
@@ -116,22 +153,125 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         );
       }
     } on FirebaseAuthException catch (e) {
-      String message = 'An error occurred';
-      if (e.code == 'user-not-found') {
-        message = 'No user found for that email.';
-      } else if (e.code == 'wrong-password') {
-        message = 'Wrong password provided.';
-      } else if (e.code == 'email-already-in-use') {
-        message = 'That email is already registered.';
-      } else if (e.code == 'invalid-email') {
-        message = 'Invalid email format.';
-      } else if (e.code == 'weak-password') {
-        message = 'Password should be at least 6 characters.';
+      String message;
+      String title = 'Login Failed';
+
+      switch (e.code) {
+        case 'user-not-found':
+          message = 'No account found with this email address. Please check your email or create a new account.';
+          break;
+        case 'wrong-password':
+          message = 'Incorrect password. Please try again or use "Forgot Password" to reset it.';
+          break;
+        case 'invalid-credential':
+          message = 'Invalid email or password. Please check your credentials and try again.';
+          break;
+        case 'user-disabled':
+          message = 'This account has been disabled. Please contact support.';
+          break;
+        case 'too-many-requests':
+          title = 'Too Many Attempts';
+          message = 'Too many failed login attempts. Please wait a few minutes before trying again.';
+          break;
+        case 'network-request-failed':
+          title = 'Network Error';
+          message = 'Network error occurred. Please check your internet connection and try again.';
+          break;
+        case 'invalid-email':
+          message = 'Please enter a valid email address.';
+          break;
+        default:
+          message = 'Login failed: ${e.message ?? 'Unknown error occurred'}. Please try again.';
       }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      
+      _showErrorDialog(title, message, showRetry: true);
+    } catch (e) {
+      // Handle timeout and other general errors
+      String message;
+      String title = 'Login Error';
+      
+      if (e.toString().contains('timed out')) {
+        title = 'Request Timeout';
+        message = 'The login request timed out. Please check your connection and try again.';
+      } else {
+        message = 'An unexpected error occurred: ${e.toString()}. Please try again.';
+      }
+      
+      _showErrorDialog(title, message, showRetry: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  /// ✅ Show error dialog with optional retry button
+  void _showErrorDialog(String title, String message, {bool showRetry = false}) {
+    if (!mounted) return;
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(
+              title.contains('Network') || title.contains('Internet') 
+                ? Icons.wifi_off 
+                : title.contains('Timeout') 
+                  ? Icons.access_time 
+                  : Icons.error_outline,
+              color: AppTheme.accentOrange,
+              size: 24,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          message,
+          style: const TextStyle(
+            fontSize: 14,
+            color: AppTheme.textSecondary,
+            height: 1.4,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text(
+              'OK',
+              style: TextStyle(color: AppTheme.textSecondary),
+            ),
+          ),
+          if (showRetry) ...[
+            const SizedBox(width: 8),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _submit(); // Retry the login
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryGreen,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('Retry'),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   Future<void> _resetPassword() async {
@@ -172,18 +312,35 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Container(
-                        width: 80,
-                        height: 80,
+                      // 🎨 Enhanced app icon with smooth animation
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 1000),
+                        curve: Curves.elasticOut,
+                        width: 88,
+                        height: 88,
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(24),
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.white.withValues(alpha: 0.25),
+                              Colors.white.withValues(alpha: 0.15),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(28),
                           border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.3),
+                            color: Colors.white.withValues(alpha: 0.4),
                             width: 2,
                           ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              blurRadius: 20,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
                         ),
-                        child: const Icon(Icons.restaurant_menu, color: Colors.white, size: 40),
+                        child: const Icon(Icons.restaurant_menu, color: Colors.white, size: 44),
                       ),
                       const SizedBox(height: 24),
                       Text(
@@ -216,23 +373,32 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                 ),
               ),
 
-              // Form section
+              // 🎨 Enhanced form section with subtle animation
               Expanded(
                 flex: 3,
-                child: Container(
-                  decoration: const BoxDecoration(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 600),
+                  curve: Curves.easeOut,
+                  decoration: BoxDecoration(
                     color: AppTheme.surfaceLight,
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(32),
-                      topRight: Radius.circular(32),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(36),
+                      topRight: Radius.circular(36),
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 32,
+                        offset: const Offset(0, -8),
+                      ),
+                    ],
                   ),
                   child: SlideTransition(
                     position: _slideAnimation,
                     child: FadeTransition(
                       opacity: _fadeAnimation,
                       child: Padding(
-                        padding: const EdgeInsets.all(32),
+                        padding: const EdgeInsets.fromLTRB(32, 40, 32, 32),
                         child: SingleChildScrollView(
                           physics: const BouncingScrollPhysics(),
                           child: Form(

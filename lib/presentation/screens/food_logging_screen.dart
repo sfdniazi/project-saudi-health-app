@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:camera/camera.dart';
 import '../../core/app_theme.dart';
 import '../../services/firebase_service.dart';
+import '../../services/mlkit_service.dart'; // 🎯 Import ML Kit service
 import '../../models/food_model.dart';
 import '../../presentation/widgets/custom_appbar.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class FoodLoggingScreen extends StatefulWidget {
   const FoodLoggingScreen({super.key});
@@ -73,6 +76,11 @@ class _FoodLoggingScreenState extends State<FoodLoggingScreen>
               
               // Today's Meals
               _buildTodaysMeals(),
+              
+              const SizedBox(height: 20),
+              
+              // 🎯 Scan History Section
+              _buildScanHistorySection(),
             ],
           ),
         ),
@@ -601,9 +609,269 @@ class _FoodLoggingScreenState extends State<FoodLoggingScreen>
       onTap: () => Navigator.pop(context, value),
     );
   }
+
+  /// 🎯 Build scan history section with inline history display
+  Widget _buildScanHistorySection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(
+              Icons.history,
+              color: AppTheme.primaryGreen,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'Recent Scans',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textPrimary,
+              ),
+            ),
+            const Spacer(),
+// 🧺 Removed "View All" button as full scan history is not implemented yet
+          ],
+        ),
+        
+        const SizedBox(height: 12),
+        
+        // 🎯 Stream scan history from Firestore
+        StreamBuilder<List<Map<String, dynamic>>>(
+          stream: FirebaseService.streamScanHistory(user!.uid, limit: 10),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Container(
+                height: 120,
+                alignment: Alignment.center,
+                child: const CircularProgressIndicator(color: AppTheme.primaryGreen),
+              );
+            }
+            
+            if (snapshot.hasError) {
+              return Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppTheme.accentOrange.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppTheme.accentOrange.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline, color: AppTheme.accentOrange),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Error loading scan history: ${snapshot.error}',
+                        style: const TextStyle(
+                          color: AppTheme.accentOrange,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+            
+            final scanHistory = snapshot.data ?? [];
+            
+            if (scanHistory.isEmpty) {
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceLight,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: AppTheme.textLight.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.qr_code_scanner_outlined,
+                      color: AppTheme.textSecondary.withValues(alpha: 0.5),
+                      size: 48,
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'No scans yet',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Scan your first food barcode to see it here',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppTheme.textLight,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              );
+            }
+            
+            // Show scan history list
+            return ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: scanHistory.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                return _buildScanHistoryItem(scanHistory[index]);
+              },
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  /// 🎯 Build individual scan history item
+  Widget _buildScanHistoryItem(Map<String, dynamic> scanData) {
+    final mealInfo = scanData['mealInfo'] as Map<String, dynamic>;
+    final timestamp = scanData['timestamp'] as Timestamp?;
+    final barcode = scanData['barcode'] as String;
+    
+    // Format timestamp
+    final timeString = timestamp != null
+        ? DateFormat('MMM d, HH:mm').format(timestamp.toDate())
+        : 'Recently';
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppTheme.textLight.withValues(alpha: 0.2),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // 🎯 Food icon with background
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: AppTheme.primaryGreen.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.qr_code,
+              color: AppTheme.primaryGreen,
+              size: 24,
+            ),
+          ),
+          
+          const SizedBox(width: 16),
+          
+          // 🎯 Food info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  mealInfo['name'] as String,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimary,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.access_time,
+                      size: 14,
+                      color: AppTheme.textSecondary,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      timeString,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Icon(
+                      Icons.tag,
+                      size: 14,
+                      color: AppTheme.textLight,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      barcode.length > 8 
+                          ? '${barcode.substring(0, 8)}...'
+                          : barcode,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textLight,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          
+          // 🎯 Nutrition info badge
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryGreen.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  '${mealInfo['calories']}',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.primaryGreen,
+                  ),
+                ),
+                const Text(
+                  'cal',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                    color: AppTheme.primaryGreen,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-// Barcode Scanner Bottom Sheet
+// 🎯 Enhanced Barcode Scanner with real ML Kit integration
 class _BarcodeBottomSheet extends StatefulWidget {
   final Function(String, Map<String, dynamic>) onFoodScanned;
 
@@ -613,8 +881,213 @@ class _BarcodeBottomSheet extends StatefulWidget {
   State<_BarcodeBottomSheet> createState() => _BarcodeBottomSheetState();
 }
 
-class _BarcodeBottomSheetState extends State<_BarcodeBottomSheet> {
-  bool _hasScanned = false;
+class _BarcodeBottomSheetState extends State<_BarcodeBottomSheet> 
+    with WidgetsBindingObserver {
+  final MLKitService _mlKitService = MLKitService.instance;
+  
+  bool _isInitialized = false;
+  bool _isScanning = false;
+  bool _isProcessing = false;
+  String? _errorMessage;
+  CameraController? _cameraController;
+  Map<String, dynamic>? _lastScanResult;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _initializeScanner();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _stopScanning();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_cameraController == null || !_cameraController!.value.isInitialized) {
+      return;
+    }
+    
+    if (state == AppLifecycleState.inactive) {
+      _cameraController?.dispose();
+    } else if (state == AppLifecycleState.resumed) {
+      _initializeCamera();
+    }
+  }
+
+  /// 🎯 Initialize ML Kit scanner
+  Future<void> _initializeScanner() async {
+    try {
+      await _mlKitService.initialize();
+      setState(() {
+        _isInitialized = true;
+        _errorMessage = null;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Failed to initialize scanner: $e';
+        _isInitialized = false;
+      });
+    }
+  }
+
+  /// 🎯 Initialize camera for scanning
+  Future<void> _initializeCamera() async {
+    try {
+      final controller = await _mlKitService.startCamera();
+      if (mounted && controller != null) {
+        setState(() {
+          _cameraController = controller;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Camera failed: $e';
+        });
+      }
+    }
+  }
+
+  /// 🎯 Start scanning process
+  Future<void> _startScanning() async {
+    if (!_isInitialized) {
+      _showErrorMessage('Scanner not initialized');
+      return;
+    }
+
+    try {
+      setState(() {
+        _isScanning = true;
+        _errorMessage = null;
+        _lastScanResult = null;
+      });
+
+      await _initializeCamera();
+      if (_cameraController == null) {
+        throw Exception('Camera initialization failed');
+      }
+
+      // Start image stream processing
+      await _cameraController!.startImageStream(_processCameraImage);
+
+    } catch (e) {
+      setState(() {
+        _isScanning = false;
+        _errorMessage = 'Failed to start scanning: $e';
+      });
+    }
+  }
+
+  /// 🎯 Process camera image for barcode detection
+  Future<void> _processCameraImage(CameraImage image) async {
+    if (_isProcessing || !_isScanning) return;
+    
+    _isProcessing = true;
+    
+    try {
+      final barcode = await _mlKitService.scanBarcodeFromImage(image);
+      
+      if (barcode != null && mounted) {
+        await _stopScanning();
+        await _handleBarcodeResult(barcode);
+      }
+    } catch (e) {
+      debugPrint('Error processing camera image: $e');
+    } finally {
+      _isProcessing = false;
+    }
+  }
+
+  /// 🎯 Handle scanned barcode result
+  Future<void> _handleBarcodeResult(String barcode) async {
+    try {
+      // Get food data from ML Kit service
+      final foodData = _mlKitService.getFoodDataForBarcode(barcode);
+      
+      // Save scan result to Firestore for history
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await FirebaseService.saveScanResult(
+          uid: user.uid,
+          barcode: barcode,
+          mealInfo: foodData,
+        );
+      }
+
+      setState(() {
+        _lastScanResult = {
+          'barcode': barcode,
+          ...foodData,
+          'scannedAt': DateTime.now(),
+        };
+      });
+
+      // Show success and pass result to parent
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text('Scanned: ${foodData['name']}'),
+                ),
+              ],
+            ),
+            backgroundColor: AppTheme.primaryGreen,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        
+        // Add delay to show result, then proceed
+        await Future.delayed(const Duration(milliseconds: 1500));
+        widget.onFoodScanned(barcode, foodData);
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Failed to process scan: $e';
+      });
+    }
+  }
+
+  /// 🎯 Stop scanning and cleanup
+  Future<void> _stopScanning() async {
+    try {
+      await _cameraController?.stopImageStream();
+      await _mlKitService.stopCamera();
+      setState(() {
+        _isScanning = false;
+        _cameraController = null;
+      });
+    } catch (e) {
+      debugPrint('Error stopping scanning: $e');
+    }
+  }
+
+  /// 🎯 Show error message
+  void _showErrorMessage(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline, color: Colors.white),
+              const SizedBox(width: 8),
+              Expanded(child: Text(message)),
+            ],
+          ),
+          backgroundColor: AppTheme.accentOrange,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -626,12 +1099,13 @@ class _BarcodeBottomSheetState extends State<_BarcodeBottomSheet> {
       ),
       child: Column(
         children: [
+          // 🎯 Header
           Container(
             padding: const EdgeInsets.all(20),
             child: Row(
               children: [
                 const Text(
-                  'Scan Barcode',
+                  'Scan Food Barcode',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -639,58 +1113,226 @@ class _BarcodeBottomSheetState extends State<_BarcodeBottomSheet> {
                 ),
                 const Spacer(),
                 IconButton(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () {
+                    _stopScanning();
+                    Navigator.pop(context);
+                  },
                   icon: const Icon(Icons.close),
                 ),
               ],
             ),
           ),
+          
+          // 🎯 Camera Preview or Status
           Expanded(
             child: Container(
               margin: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.grey[200],
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppTheme.primaryGreen.withValues(alpha: 0.3),
+                  width: 2,
+                ),
+              ),
+              child: _buildCameraContent(),
+            ),
+          ),
+          
+          // 🎯 Action Buttons
+          Container(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                if (_errorMessage != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: AppTheme.accentOrange.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: AppTheme.accentOrange.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.warning, 
+                          color: AppTheme.accentOrange, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _errorMessage!,
+                            style: const TextStyle(
+                              color: AppTheme.accentOrange,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _isScanning ? _stopScanning : _startScanning,
+                    icon: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      child: _isScanning
+                          ? const Icon(Icons.stop, key: ValueKey('stop'))
+                          : const Icon(Icons.qr_code_scanner, key: ValueKey('start')),
+                    ),
+                    label: Text(_isScanning ? 'Stop Scanning' : 'Start Scanning'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _isScanning 
+                          ? AppTheme.accentOrange 
+                          : AppTheme.primaryGreen,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                  ),
+                ),
+                
+// 🧹 Removed demo scan button as requested
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 🎯 Build camera content based on current state
+  Widget _buildCameraContent() {
+    if (_lastScanResult != null) {
+      // Show scan result
+      final result = _lastScanResult!;
+      return Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryGreen.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Center(
+              child: const Icon(
+                Icons.check_circle,
+                color: AppTheme.primaryGreen,
+                size: 48,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Scanned Successfully!',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              result['name'] as String,
+              style: const TextStyle(
+                fontSize: 16,
+                color: AppTheme.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '${result['calories']} calories',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.primaryGreen,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    
+    if (_isScanning && _cameraController != null && 
+        _cameraController!.value.isInitialized) {
+      // Show camera preview
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: Stack(
+          children: [
+            SizedBox(
+              width: double.infinity,
+              height: double.infinity,
+              child: CameraPreview(_cameraController!),
+            ),
+            // Scanning overlay
+            Container(
+              width: double.infinity,
+              height: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.qr_code_scanner, size: 64, color: Colors.grey),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Barcode scanner will be implemented',
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                    Icon(
+                      Icons.qr_code_scanner,
+                      color: Colors.white,
+                      size: 64,
                     ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'For now, use manual entry below',
-                      style: TextStyle(fontSize: 14, color: Colors.grey),
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: () {
-                        // Simulate a scanned barcode for testing
-                        if (!_hasScanned) {
-                          setState(() => _hasScanned = true);
-                          widget.onFoodScanned('1234567890123', {
-                            'name': 'Sample Scanned Product',
-                            'calories': 120,
-                            'protein': 8.0,
-                            'carbs': 15.0,
-                            'fat': 3.0,
-                            'brand': 'Sample Brand',
-                          });
-                          Navigator.pop(context);
-                        }
-                      },
-                      child: const Text('Simulate Scan (Demo)'),
+                    SizedBox(height: 16),
+                    Text(
+                      'Point camera at barcode',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
+          ],
+        ),
+      );
+    }
+    
+    // Default state
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.qr_code_scanner,
+            size: 64,
+            color: Colors.grey[400],
           ),
+          const SizedBox(height: 16),
+          Text(
+            _isInitialized 
+                ? 'Tap "Start Scanning" to begin'
+                : 'Initializing scanner...',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey[600],
+            ),
+            textAlign: TextAlign.center,
+          ),
+          if (!_isInitialized) ...[
+            const SizedBox(height: 12),
+            const CircularProgressIndicator(),
+          ],
         ],
       ),
     );

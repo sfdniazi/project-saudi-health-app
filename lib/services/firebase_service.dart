@@ -72,6 +72,7 @@ class FirebaseService {
   static Future<void> updateUserData({
     String? displayName,
     int? age,
+    String? gender,
     double? height,
     double? weight,
     double? idealWeight,
@@ -86,6 +87,7 @@ class FirebaseService {
 
     if (displayName != null) updates['displayName'] = displayName;
     if (age != null) updates['age'] = age;
+    if (gender != null) updates['gender'] = gender;
     if (height != null) updates['height'] = height;
     if (weight != null) updates['weight'] = weight;
     if (idealWeight != null) updates['idealWeight'] = idealWeight;
@@ -126,7 +128,7 @@ class FirebaseService {
         height: 0.0,
         weight: 0.0,
         idealWeight: 0.0,
-        dailyGoal: 2000,
+        dailyGoal: 0, // 🎯 Will be calculated based on user profile in UI
         units: 'Metric (kg, cm)',
         notificationsEnabled: true,
         createdAt: DateTime.now(),
@@ -454,6 +456,103 @@ class FirebaseService {
       }
     } catch (e) {
       throw Exception('Failed to generate recommendations: $e');
+    }
+  }
+
+  // ========== SCAN HISTORY ==========
+
+  static CollectionReference _getScanHistoryCollection(String uid) {
+    return _usersCollection.doc(uid).collection('scanHistory');
+  }
+
+  /// 🎯 Save barcode scan result to Firestore
+  static Future<void> saveScanResult({
+    required String uid,
+    required String barcode,
+    required Map<String, dynamic> mealInfo,
+  }) async {
+    try {
+      // Create scan document with auto-generated ID
+      final docRef = _getScanHistoryCollection(uid).doc();
+      
+      await docRef.set({
+        'id': docRef.id,
+        'barcode': barcode,
+        'mealInfo': mealInfo,
+        'timestamp': FieldValue.serverTimestamp(),
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      throw Exception('Failed to save scan result: $e');
+    }
+  }
+
+  /// 🎯 Get scan history for user (paginated)
+  static Future<List<Map<String, dynamic>>> getScanHistory(
+    String uid, {
+    int limit = 20,
+    DocumentSnapshot? startAfter,
+  }) async {
+    try {
+      Query query = _getScanHistoryCollection(uid)
+          .orderBy('timestamp', descending: true)
+          .limit(limit);
+
+      if (startAfter != null) {
+        query = query.startAfterDocument(startAfter);
+      }
+
+      final querySnapshot = await query.get();
+      return querySnapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        data['documentSnapshot'] = doc; // For pagination
+        return data;
+      }).toList();
+    } catch (e) {
+      throw Exception('Failed to get scan history: $e');
+    }
+  }
+
+  /// 🎯 Stream scan history for real-time updates
+  static Stream<List<Map<String, dynamic>>> streamScanHistory(
+    String uid, {
+    int limit = 20,
+  }) {
+    return _getScanHistoryCollection(uid)
+        .orderBy('timestamp', descending: true)
+        .limit(limit)
+        .snapshots()
+        .map((querySnapshot) {
+      return querySnapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        data['documentSnapshot'] = doc; // For pagination
+        return data;
+      }).toList();
+    });
+  }
+
+  /// 🎯 Delete specific scan from history
+  static Future<void> deleteScanResult(String uid, String scanId) async {
+    try {
+      await _getScanHistoryCollection(uid).doc(scanId).delete();
+    } catch (e) {
+      throw Exception('Failed to delete scan result: $e');
+    }
+  }
+
+  /// 🎯 Clear all scan history for user
+  static Future<void> clearScanHistory(String uid) async {
+    try {
+      final querySnapshot = await _getScanHistoryCollection(uid).get();
+      final batch = _firestore.batch();
+      
+      for (final doc in querySnapshot.docs) {
+        batch.delete(doc.reference);
+      }
+      
+      await batch.commit();
+    } catch (e) {
+      throw Exception('Failed to clear scan history: $e');
     }
   }
 

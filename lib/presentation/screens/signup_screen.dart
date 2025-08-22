@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:connectivity_plus/connectivity_plus.dart'; // 📶 Connectivity check
 import '../../core/app_theme.dart';
 import '../../services/firebase_service.dart';
 import '../navigation/main_navigation.dart';
@@ -67,72 +68,275 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
     super.dispose();
   }
 
+  /// ✅ Check internet connectivity before attempting signup
+  Future<bool> _checkConnectivity() async {
+    try {
+      final connectivityResult = await (Connectivity().checkConnectivity());
+      return connectivityResult != ConnectivityResult.none;
+    } catch (e) {
+      return false; // Assume no connection if error occurs
+    }
+  }
+
+  /// ✅ Show error dialog with optional retry button
+  void _showErrorDialog(String title, String message, {bool showRetry = false}) {
+    if (!mounted) return;
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(
+              title.contains('Network') || title.contains('Internet') 
+                ? Icons.wifi_off 
+                : title.contains('Timeout') 
+                  ? Icons.access_time 
+                  : Icons.error_outline,
+              color: AppTheme.accentOrange,
+              size: 24,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          message,
+          style: const TextStyle(
+            fontSize: 14,
+            color: AppTheme.textSecondary,
+            height: 1.4,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text(
+              'OK',
+              style: TextStyle(color: AppTheme.textSecondary),
+            ),
+          ),
+          if (showRetry) ...[
+            const SizedBox(width: 8),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _createAccount(); // Retry the signup
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryGreen,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('Retry'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// ✅ Show signup success dialog with user guidelines
+  void _showSignupSuccessDialog() {
+    if (!mounted) return;
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(
+              Icons.check_circle,
+              color: AppTheme.primaryGreen,
+              size: 24,
+            ),
+            SizedBox(width: 12),
+            Text(
+              'Welcome to Nabd Al-Hayah!',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textPrimary,
+              ),
+            ),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Your account has been created successfully! Here are some tips to get started:',
+              style: TextStyle(
+                fontSize: 14,
+                color: AppTheme.textSecondary,
+                height: 1.4,
+              ),
+            ),
+            SizedBox(height: 16),
+            Text('• Complete your profile for personalized recommendations'),
+            SizedBox(height: 8),
+            Text('• Log your first meal to start tracking'),
+            SizedBox(height: 8),
+            Text('• Set daily hydration and activity goals'),
+            SizedBox(height: 8),
+            Text('• Check your progress on the dashboard'),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const MainNavigation()),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryGreen,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text('Get Started'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// ✅ Enhanced create account with timeout, connectivity check, and user guidelines
   Future<void> _createAccount() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // Check connectivity first
+    final hasConnection = await _checkConnectivity();
+    if (!hasConnection) {
+      _showErrorDialog(
+        'No Internet Connection',
+        'Please check your internet connection and try again.',
+        showRetry: true,
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
 
     try {
-      // Create Firebase Auth user
-      final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
-
-      final user = credential.user;
-      if (user != null) {
-        // Update Firebase Auth display name
-        await user.updateDisplayName(_nameController.text.trim());
-
-        // Create comprehensive user profile in Firestore
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-          'uid': user.uid,
-          'email': _emailController.text.trim(),
-          'displayName': _nameController.text.trim(),
-          'age': int.parse(_ageController.text.trim()),
-          'gender': _selectedGender,
-          'height': double.parse(_heightController.text.trim()),
-          'weight': double.parse(_weightController.text.trim()),
-          'idealWeight': double.parse(_idealWeightController.text.trim()),
-          'units': _selectedUnits,
-          'dailyGoal': _calculateDailyCalorieGoal(),
-          'notificationsEnabled': true,
-          'createdAt': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-
-        // Initialize user collections
-        await FirebaseService.initializeUserCollections(user.uid);
-
-        if (mounted) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const MainNavigation()),
-          );
-        }
-      }
+      // 🕐 Apply 15-second timeout to the entire signup process
+      await Future.any([
+        _performSignup(),
+        Future.delayed(const Duration(seconds: 15), () {
+          throw Exception('Signup timed out. Please try again.');
+        })
+      ]);
     } on FirebaseAuthException catch (e) {
-      String message = 'An error occurred during registration';
-      if (e.code == 'email-already-in-use') {
-        message = 'This email is already registered. Please use a different email.';
-      } else if (e.code == 'invalid-email') {
-        message = 'Please enter a valid email address.';
-      } else if (e.code == 'weak-password') {
-        message = 'Password should be at least 6 characters long.';
+      String message;
+      String title = 'Signup Failed';
+
+      switch (e.code) {
+        case 'email-already-in-use':
+          title = 'Email Already Registered';
+          message = 'This email address is already registered. Please use a different email or try logging in.';
+          break;
+        case 'invalid-email':
+          message = 'Please enter a valid email address.';
+          break;
+        case 'weak-password':
+          message = 'Password should be at least 6 characters long and contain a mix of letters and numbers.';
+          break;
+        case 'network-request-failed':
+          title = 'Network Error';
+          message = 'Network error occurred. Please check your internet connection and try again.';
+          break;
+        case 'operation-not-allowed':
+          message = 'Email/password accounts are not enabled. Please contact support.';
+          break;
+        default:
+          message = 'Signup failed: ${e.message ?? 'Unknown error occurred'}. Please try again.';
       }
       
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
-        );
-      }
+      _showErrorDialog(title, message, showRetry: true);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Registration failed: ${e.toString()}')),
-        );
+      String message;
+      String title = 'Signup Error';
+      
+      if (e.toString().contains('timed out')) {
+        title = 'Request Timeout';
+        message = 'The signup request timed out. Please check your connection and try again.';
+      } else {
+        message = 'An unexpected error occurred: ${e.toString()}. Please try again.';
       }
+      
+      _showErrorDialog(title, message, showRetry: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  /// ✅ Perform the actual signup process
+  Future<void> _performSignup() async {
+    // Create Firebase Auth user
+    final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      email: _emailController.text.trim(),
+      password: _passwordController.text.trim(),
+    );
+
+    final user = credential.user;
+    if (user != null) {
+      // Update Firebase Auth display name
+      await user.updateDisplayName(_nameController.text.trim());
+
+      // Create comprehensive user profile in Firestore
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        'uid': user.uid,
+        'email': _emailController.text.trim(),
+        'displayName': _nameController.text.trim(),
+        'age': int.parse(_ageController.text.trim()),
+        'gender': _selectedGender,
+        'height': double.parse(_heightController.text.trim()),
+        'weight': double.parse(_weightController.text.trim()),
+        'idealWeight': double.parse(_idealWeightController.text.trim()),
+        'units': _selectedUnits,
+        'dailyGoal': _calculateDailyCalorieGoal(),
+        'notificationsEnabled': true,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Initialize user collections (with timeout)
+      try {
+        await FirebaseService.initializeUserCollections(user.uid).timeout(
+          const Duration(seconds: 5),
+          onTimeout: () {
+            debugPrint('User collections initialization timed out, but signup succeeded');
+            // Continue anyway - collections can be initialized later
+          },
+        );
+      } catch (e) {
+        debugPrint('Error initializing user collections: $e');
+        // Continue anyway - this is not critical for signup
+      }
+
+      // Show success dialog with user guidelines
+      if (mounted) {
+        _showSignupSuccessDialog();
+      }
     }
   }
 
@@ -182,15 +386,24 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
               // Header
               _buildHeader(),
               
-              // Form Pages
+              // 🎨 Enhanced form pages with animation
               Expanded(
-                child: Container(
-                  decoration: const BoxDecoration(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 600),
+                  curve: Curves.easeOut,
+                  decoration: BoxDecoration(
                     color: AppTheme.surfaceLight,
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(32),
-                      topRight: Radius.circular(32),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(36),
+                      topRight: Radius.circular(36),
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 32,
+                        offset: const Offset(0, -8),
+                      ),
+                    ],
                   ),
                   child: FadeTransition(
                     opacity: _fadeAnimation,
@@ -247,23 +460,34 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
           ),
           const SizedBox(height: 20),
           
-          // Progress Indicator
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(3, (index) {
-              return Container(
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                width: _currentPage == index ? 32 : 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: _currentPage == index 
-                      ? Colors.white 
-                      : Colors.white.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              );
-            }),
-          ),
+              // 🎨 Enhanced progress indicator with animations
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(3, (index) {
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    width: _currentPage == index ? 36 : 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: _currentPage == index 
+                          ? Colors.white 
+                          : Colors.white.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(6),
+                      boxShadow: _currentPage == index 
+                          ? [
+                              BoxShadow(
+                                color: Colors.white.withValues(alpha: 0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                          : null,
+                    ),
+                  );
+                }),
+              ),
         ],
       ),
     );
@@ -271,7 +495,7 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
 
   Widget _buildAccountInfoPage() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.fromLTRB(32, 40, 32, 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

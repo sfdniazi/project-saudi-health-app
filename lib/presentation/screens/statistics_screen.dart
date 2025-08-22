@@ -84,18 +84,18 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         stream: FirebaseService.streamCurrentUserProfile(),
         builder: (context, userSnapshot) {
           if (userSnapshot.connectionState == ConnectionState.waiting) {
-            return Container(
-              decoration: const BoxDecoration(gradient: AppTheme.headerGradient),
-              child: const Center(
-                child: CircularProgressIndicator(color: Colors.white),
-              ),
-            );
+              return Container(
+                decoration: BoxDecoration(gradient: AppTheme.getHeaderGradient(context)), // 🎨 Theme-aware
+                child: const Center(
+                  child: CircularProgressIndicator(color: Colors.white),
+                ),
+              );
           }
 
           final userProfile = userSnapshot.data;
           if (userProfile == null) {
             return Container(
-              decoration: const BoxDecoration(gradient: AppTheme.headerGradient),
+              decoration: BoxDecoration(gradient: AppTheme.getHeaderGradient(context)), // 🎨 Theme-aware
               child: const Center(
                 child: Text(
                   "Profile not found",
@@ -119,8 +119,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
               // Custom app bar with theme
               Container(
                 padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
-                decoration: const BoxDecoration(
-                  gradient: AppTheme.headerGradient,
+                decoration: BoxDecoration(
+                  gradient: AppTheme.getHeaderGradient(context), // 🎨 Theme-aware header gradient
                 ),
                 child: Row(
                   children: [
@@ -146,7 +146,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
               
               Expanded(
                 child: Container(
-                  color: AppTheme.background,
+                  color: AppTheme.getBackgroundColor(context), // 🎨 Theme-aware background
                   child: StreamBuilder<double?>(
                     stream: _getLatestWeight(),
                     builder: (context, latestWeightSnapshot) {

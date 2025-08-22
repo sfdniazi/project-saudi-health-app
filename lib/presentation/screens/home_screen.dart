@@ -342,7 +342,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           builder: (context, snapshot) {
             final foodLog = snapshot.data;
             final calories = foodLog?.totalCalories ?? 0.0;
-            final goal = (userProfile?.dailyGoal ?? 2000).toDouble();
+            final goal = (userProfile?.calculatedDailyGoal ?? 2000).toDouble(); // 🎯 Use dynamic goal
             final progress = (calories / goal).clamp(0.0, 1.0);
             
             return _buildFullWidthCard(

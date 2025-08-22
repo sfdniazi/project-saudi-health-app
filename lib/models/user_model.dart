@@ -24,7 +24,7 @@ class UserModel {
     this.height = 0.0,
     this.weight = 0.0,
     this.idealWeight = 0.0,
-    this.dailyGoal = 2000,
+    this.dailyGoal = 0, // 🎯 Dynamic default goal calculated based on user profile
     this.units = 'Metric (kg, cm)',
     this.notificationsEnabled = true,
     this.createdAt,
@@ -61,7 +61,7 @@ class UserModel {
       height: map['height']?.toDouble() ?? 0.0,
       weight: map['weight']?.toDouble() ?? 0.0,
       idealWeight: map['idealWeight']?.toDouble() ?? 0.0,
-      dailyGoal: map['dailyGoal']?.toInt() ?? 2000,
+      dailyGoal: map['dailyGoal']?.toInt() ?? 0, // 🎯 Dynamic default based on user profile
       units: map['units'] ?? 'Metric (kg, cm)',
       notificationsEnabled: map['notificationsEnabled'] ?? true,
       createdAt: map['createdAt'] is Timestamp 
@@ -96,6 +96,29 @@ class UserModel {
     if (bmiValue < 25) return 'Normal';
     if (bmiValue < 30) return 'Overweight';
     return 'Obese';
+  }
+  
+  // 🎯 Calculate dynamic daily calorie goal based on user profile
+  int get calculatedDailyGoal {
+    if (dailyGoal > 0) return dailyGoal; // Use user-set goal if available
+    
+    // Calculate BMR (Basal Metabolic Rate) using Harris-Benedict Formula
+    if (age <= 0 || height <= 0 || weight <= 0) {
+      return 2000; // Fallback for incomplete profiles
+    }
+    
+    double bmr;
+    if (gender.toLowerCase() == 'male') {
+      bmr = 88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age);
+    } else {
+      bmr = 447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age);
+    }
+    
+    // Apply activity factor (assuming moderate activity)
+    final dailyCalories = (bmr * 1.55).round();
+    
+    // Ensure reasonable bounds
+    return dailyCalories.clamp(1200, 3500);
   }
 
   // Copy with method for updating user data

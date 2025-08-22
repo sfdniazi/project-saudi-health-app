@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/app_theme.dart';
+import '../../core/consent_manager.dart'; // 🔒 Privacy consent
 import '../widgets/nutrient_indicator.dart';
+import '../widgets/animated_user_avatar.dart'; // 🎨 Animated avatar
 import '../../services/firebase_service.dart';
 import '../../models/user_model.dart';
+import '../../main.dart'; // 🎨 For ThemeModeProvider
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -18,6 +21,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _notificationsEnabled = true;
   String _selectedUnit = 'Metric (kg, cm)';
   int _dailyGoal = 2000;
+  ThemeMode _currentThemeMode = ThemeMode.system; // 🎨 Track current theme mode
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedThemeMode();
+  }
+
+  // 🎨 Load saved theme mode on widget init
+  Future<void> _loadSavedThemeMode() async {
+    final savedTheme = await AppTheme.getSavedThemeMode();
+    setState(() {
+      _currentThemeMode = savedTheme;
+    });
+  }
 
   // ==============================
   // DIALOGS
@@ -223,6 +241,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 onChanged: (value) {},
               ),
             ),
+            // 🔒 Privacy consent option
+            ListTile(
+              leading: const Icon(Icons.privacy_tip, color: AppTheme.primaryGreen),
+              title: const Text('Privacy Consent'),
+              subtitle: const Text('Manage data collection preferences'),
+              onTap: () {
+                Navigator.pop(context);
+                ConsentManager.showConsentSettings(context);
+              },
+            ),
           ],
         ),
         actions: [
@@ -231,6 +259,320 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: const Text('Close'),
           ),
         ],
+      ),
+    );
+  }
+
+  /// ✅ Show theme settings dialog with proper current theme tracking
+  void _showThemeSettings() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.palette_outlined, color: AppTheme.primaryGreen),
+            SizedBox(width: 12),
+            Text('Theme Settings'),
+          ],
+        ),
+        content: StatefulBuilder(
+          builder: (context, setDialogState) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RadioListTile<ThemeMode>(
+                title: const Text('Light Mode'),
+                subtitle: const Text('Use light theme always'),
+                value: ThemeMode.light,
+                groupValue: _currentThemeMode, // 🎨 Use tracked theme mode
+                onChanged: (value) {
+                  if (value != null) {
+                    // 🎨 Update theme instantly across entire app
+                    final provider = ThemeModeProvider.of(context);
+                    provider?.updateThemeMode(value);
+                    setState(() {
+                      _currentThemeMode = value;
+                    });
+                    setDialogState(() {});
+                    Navigator.pop(context);
+                    // 🎨 Show confirmation
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Theme changed to Light Mode'),
+                        backgroundColor: AppTheme.primaryGreen,
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                },
+              ),
+              RadioListTile<ThemeMode>(
+                title: const Text('Dark Mode'),
+                subtitle: const Text('Use dark theme always'),
+                value: ThemeMode.dark,
+                groupValue: _currentThemeMode, // 🎨 Use tracked theme mode
+                onChanged: (value) {
+                  if (value != null) {
+                    // 🎨 Update theme instantly across entire app
+                    final provider = ThemeModeProvider.of(context);
+                    provider?.updateThemeMode(value);
+                    setState(() {
+                      _currentThemeMode = value;
+                    });
+                    setDialogState(() {});
+                    Navigator.pop(context);
+                    // 🎨 Show confirmation
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Theme changed to Dark Mode'),
+                        backgroundColor: AppTheme.primaryGreen,
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                },
+              ),
+              RadioListTile<ThemeMode>(
+                title: const Text('System Default'),
+                subtitle: const Text('Follow device system settings'),
+                value: ThemeMode.system,
+                groupValue: _currentThemeMode, // 🎨 Use tracked theme mode
+                onChanged: (value) {
+                  if (value != null) {
+                    // 🎨 Update theme instantly across entire app
+                    final provider = ThemeModeProvider.of(context);
+                    provider?.updateThemeMode(value);
+                    setState(() {
+                      _currentThemeMode = value;
+                    });
+                    setDialogState(() {});
+                    Navigator.pop(context);
+                    // 🎨 Show confirmation
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Theme set to follow system preferences'),
+                        backgroundColor: AppTheme.primaryGreen,
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// ✅ Show editable profile dialog
+  void _showEditProfileDialog(UserModel userModel) {
+    final nameController = TextEditingController(text: userModel.displayName);
+    final ageController = TextEditingController(text: userModel.age.toString());
+    final heightController = TextEditingController(text: userModel.height.toString());
+    final weightController = TextEditingController(text: userModel.weight.toString());
+    final idealWeightController = TextEditingController(text: userModel.idealWeight.toString());
+    String selectedGender = userModel.gender;
+    String selectedUnits = userModel.units;
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.edit_outlined, color: AppTheme.primaryGreen),
+                SizedBox(width: 12),
+                Text('Edit Profile'),
+              ],
+            ),
+            content: SizedBox(
+              width: MediaQuery.of(context).size.width * 0.9,
+              child: SingleChildScrollView(
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextFormField(
+                        controller: nameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Full Name',
+                          prefixIcon: Icon(Icons.person_outline),
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Please enter your name';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: ageController,
+                        decoration: const InputDecoration(
+                          labelText: 'Age',
+                          prefixIcon: Icon(Icons.cake_outlined),
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.number,
+                        validator: (value) {
+                          final age = int.tryParse(value ?? '');
+                          if (age == null || age < 13 || age > 120) {
+                            return 'Please enter a valid age (13-120)';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        value: selectedGender,
+                        decoration: const InputDecoration(
+                          labelText: 'Gender',
+                          prefixIcon: Icon(Icons.person_outline),
+                          border: OutlineInputBorder(),
+                        ),
+                        items: ['Male', 'Female', 'Other']
+                            .map((gender) => DropdownMenuItem(
+                                  value: gender,
+                                  child: Text(gender),
+                                ))
+                            .toList(),
+                        onChanged: (value) {
+                          setModalState(() {
+                            selectedGender = value ?? 'Male';
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: heightController,
+                        decoration: InputDecoration(
+                          labelText: selectedUnits.contains('Metric') ? 'Height (cm)' : 'Height (in)',
+                          prefixIcon: const Icon(Icons.height),
+                          border: const OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.number,
+                        validator: (value) {
+                          final height = double.tryParse(value ?? '');
+                          if (height == null || height <= 0) {
+                            return 'Please enter a valid height';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: weightController,
+                        decoration: InputDecoration(
+                          labelText: selectedUnits.contains('Metric') ? 'Weight (kg)' : 'Weight (lb)',
+                          prefixIcon: const Icon(Icons.monitor_weight),
+                          border: const OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.number,
+                        validator: (value) {
+                          final weight = double.tryParse(value ?? '');
+                          if (weight == null || weight <= 0) {
+                            return 'Please enter a valid weight';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: idealWeightController,
+                        decoration: InputDecoration(
+                          labelText: selectedUnits.contains('Metric') ? 'Goal Weight (kg)' : 'Goal Weight (lb)',
+                          prefixIcon: const Icon(Icons.flag_outlined),
+                          border: const OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.number,
+                        validator: (value) {
+                          final weight = double.tryParse(value ?? '');
+                          if (weight == null || weight <= 0) {
+                            return 'Please enter a valid goal weight';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        value: selectedUnits,
+                        decoration: const InputDecoration(
+                          labelText: 'Units',
+                          prefixIcon: Icon(Icons.straighten),
+                          border: OutlineInputBorder(),
+                        ),
+                        items: ['Metric (kg, cm)', 'Imperial (lb, in)']
+                            .map((units) => DropdownMenuItem(
+                                  value: units,
+                                  child: Text(units),
+                                ))
+                            .toList(),
+                        onChanged: (value) {
+                          setModalState(() {
+                            selectedUnits = value ?? 'Metric (kg, cm)';
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  if (formKey.currentState!.validate()) {
+                    try {
+                      await FirebaseService.updateUserData(
+                        displayName: nameController.text.trim(),
+                        age: int.parse(ageController.text.trim()),
+                        gender: selectedGender,
+                        height: double.parse(heightController.text.trim()),
+                        weight: double.parse(weightController.text.trim()),
+                        idealWeight: double.parse(idealWeightController.text.trim()),
+                        units: selectedUnits,
+                      );
+                      
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Profile updated successfully!'),
+                            backgroundColor: AppTheme.primaryGreen,
+                          ),
+                        );
+                        Navigator.pop(context);
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Error updating profile: $e'),
+                            backgroundColor: AppTheme.accentOrange,
+                          ),
+                        );
+                      }
+                    }
+                  }
+                },
+                child: const Text('Update Profile'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -374,11 +716,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       body: Column(
         children: [
-          // Custom App Bar
+          // Custom App Bar - 🎨 Theme-aware header gradient
           Container(
             padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
-            decoration: const BoxDecoration(
-              gradient: AppTheme.headerGradient,
+            decoration: BoxDecoration(
+              gradient: AppTheme.getHeaderGradient(context),
             ),
             child: Row(
               children: [
@@ -472,42 +814,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 }
 
                 // Update local state variables with Firebase data
-                _dailyGoal = userModel.dailyGoal;
+                _dailyGoal = userModel.calculatedDailyGoal; // 🎯 Use calculated dynamic goal
                 _selectedUnit = userModel.units;
                 _notificationsEnabled = userModel.notificationsEnabled;
 
                 return ListView(
                   padding: const EdgeInsets.all(20),
                   children: [
-                // Profile Header
-                Container(
-                  padding: const EdgeInsets.all(20),
+                // 🎨 Enhanced profile header with smooth animation
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 600),
+                  curve: Curves.easeOutBack,
+                  padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
                     gradient: AppTheme.primaryGradient,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: AppTheme.primaryGreen.withOpacity(0.3),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
+                        color: AppTheme.primaryGreen.withOpacity(0.35),
+                        blurRadius: 24,
+                        offset: const Offset(0, 12),
+                      ),
+                      BoxShadow(
+                        color: AppTheme.primaryGreen.withOpacity(0.15),
+                        blurRadius: 40,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
                   child: Row(
                     children: [
-                      CircleAvatar(
-                        radius: 40,
-                        backgroundColor: Colors.white.withOpacity(0.3),
-                        child: Text(
-                          userModel.displayName.isNotEmpty
-                              ? userModel.displayName.substring(0, 1).toUpperCase()
-                              : (user.email?.substring(0, 1).toUpperCase() ?? 'U'),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 28,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
+                      // 🎨 Use animated avatar instead of plain CircleAvatar
+                      AnimatedUserAvatar(
+                        displayName: userModel.displayName,
+                        email: userModel.email,
+                        age: userModel.age,
+                        gender: userModel.gender,
+                        size: 80,
+                        showPulse: true, // Add pulse animation
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -515,6 +859,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
+                              // 📝 Show user name instead of email
                               userModel.displayName.isNotEmpty 
                                   ? userModel.displayName 
                                   : (user.email?.split('@').first ?? 'User'),
@@ -525,19 +870,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                             ),
                             const SizedBox(height: 4),
+                            // ℹ️ Show age and gender info instead of email
                             Text(
-                              userModel.email.isNotEmpty 
-                                  ? userModel.email 
-                                  : (user.email ?? 'No email'),
+                              '${userModel.age} years old • ${userModel.gender}',
                               style: const TextStyle(
                                 color: Colors.white70,
                                 fontSize: 14,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                             const SizedBox(height: 8),
-                            const Text(
-                              'Nutrition & Fitness Enthusiast',
-                              style: TextStyle(
+                            Text(
+                              userModel.bmi > 0 
+                                  ? 'BMI: ${userModel.bmi.toStringAsFixed(1)} (${userModel.bmiStatus})'
+                                  : 'Nutrition & Fitness Enthusiast',
+                              style: const TextStyle(
                                 color: Colors.white70,
                                 fontSize: 12,
                               ),
@@ -582,17 +929,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                 const SizedBox(height: 24),
 
-                // Daily Goals
-                Container(
-                  padding: const EdgeInsets.all(20),
+                // 🎨 Enhanced daily goals with animation and dark mode support
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 700),
+                  curve: Curves.easeOutQuart,
+                  padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: AppTheme.surfaceLight,
-                    borderRadius: BorderRadius.circular(16),
+                    // 🌙 Theme-aware background color
+                    color: Theme.of(context).brightness == Brightness.dark 
+                        ? AppTheme.surfaceDarkCard 
+                        : AppTheme.surfaceLight,
+                    borderRadius: BorderRadius.circular(20),
+                    // 🌙 Add border for dark mode
+                    border: Theme.of(context).brightness == Brightness.dark 
+                        ? Border.all(color: AppTheme.dividerDark, width: 0.5) 
+                        : null,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.black.withOpacity(0.4)
+                            : Colors.black.withOpacity(0.08),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                      BoxShadow(
+                        color: AppTheme.primaryGreen.withOpacity(
+                          Theme.of(context).brightness == Brightness.dark ? 0.1 : 0.05,
+                        ),
+                        blurRadius: 32,
+                        offset: const Offset(0, 12),
                       ),
                     ],
                   ),
@@ -665,6 +1030,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                 const SizedBox(height: 20),
 
+                // ✅ Edit Profile Button
+                Container(
+                  width: double.infinity,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    gradient: AppTheme.primaryGradient,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.primaryGreen.withOpacity(0.3),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: ElevatedButton.icon(
+                    onPressed: () => _showEditProfileDialog(userModel),
+                    icon: const Icon(Icons.edit_outlined, color: Colors.white),
+                    label: const Text(
+                      'Edit Profile',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
                 // Settings
                 Card(
                   elevation: 0,
@@ -675,7 +1078,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ListTile(
                         leading: const Icon(Icons.flag, color: AppTheme.primaryGreen),
                         title: const Text('Daily Goal'),
-                        subtitle: Text('$_dailyGoal kcal'),
+                        subtitle: Text('${userModel.calculatedDailyGoal} kcal'), // 🎯 Show calculated goal
                         trailing: const Icon(Icons.edit),
                         onTap: _showGoalDialog,
                       ),
@@ -688,6 +1091,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         onTap: _showUnitDialog,
                       ),
                       const Divider(height: 1),
+                      // 🎨 Theme setting removed - using light theme only
                       ListTile(
                         leading: const Icon(Icons.notifications_outlined,
                             color: AppTheme.accentBlack),
@@ -751,11 +1155,12 @@ class _StatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 🎨 Always use light theme colors
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppTheme.surfaceLight,
+          color: AppTheme.surfaceLight, // Always use light surface
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -774,8 +1179,8 @@ class _StatTile extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   label,
-                  style: TextStyle(
-                    color: AppTheme.textSecondary,
+                  style: const TextStyle(
+                    color: AppTheme.textSecondary, // Always use light text
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
@@ -788,18 +1193,18 @@ class _StatTile extends StatelessWidget {
               children: [
                 Text(
                   value,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w800,
-                    color: AppTheme.textPrimary,
+                    color: AppTheme.textPrimary, // Always use light text
                   ),
                 ),
                 if (unit.isNotEmpty) ...[
                   const SizedBox(width: 4),
                   Text(
                     unit,
-                    style: TextStyle(
-                      color: AppTheme.textSecondary,
+                    style: const TextStyle(
+                      color: AppTheme.textSecondary, // Always use light text
                       fontSize: 14,
                     ),
                   ),

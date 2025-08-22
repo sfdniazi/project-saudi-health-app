@@ -21,6 +21,7 @@ dependencies:
   cloud_firestore: ^4.17.3
   firebase_storage: ^11.6.0
   cloud_functions: ^4.6.0
+  firebase_crashlytics: ^3.4.8
 
   # ✅ Health & Activity Tracking
   pedometer: ^4.0.2
@@ -30,6 +31,7 @@ dependencies:
   mobile_scanner: ^3.5.7
   camera: ^0.10.5
   permission_handler: ^11.1.0
+  google_mlkit_barcode_scanning: ^0.10.0
 
   # ✅ Additional utilities
   shared_preferences: ^2.2.2

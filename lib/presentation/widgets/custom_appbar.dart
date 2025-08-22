@@ -21,9 +21,9 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        gradient: AppTheme.headerGradient,
-        borderRadius: BorderRadius.only(
+      decoration: BoxDecoration(
+        gradient: AppTheme.getHeaderGradient(context), // 🎨 Theme-aware header gradient
+        borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(30),
           bottomRight: Radius.circular(30),
         ),
@@ -65,11 +65,14 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                         : (currentUser?.displayName?.isNotEmpty == true
                             ? currentUser!.displayName!
                             : (currentUser?.email?.split('@').first ?? 'User'));
-                    final dailyGoal = userProfile?.dailyGoal ?? 2000;
+                    // 🎯 Use calculated dynamic goal from user profile
+                    final dailyGoal = userProfile?.calculatedDailyGoal ?? 0; // Dynamic calculated goal
                     
                     return Row(
                       children: [
-                        Container(
+                        // 🎨 Enhanced avatar with smooth animation
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
                           width: 60,
                           height: 60,
                           decoration: BoxDecoration(
@@ -79,6 +82,13 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                               color: Colors.white.withValues(alpha: 0.3),
                               width: 2,
                             ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.white.withValues(alpha: 0.1),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
                           child: const Icon(
                             Icons.person,
@@ -110,7 +120,9 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                             ],
                           ),
                         ),
-                        Container(
+                        // 🎨 Enhanced goal badge with animation
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.2),
@@ -119,6 +131,13 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                               color: Colors.white.withValues(alpha: 0.3),
                               width: 1,
                             ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.white.withValues(alpha: 0.1),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -134,6 +153,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                                   color: Colors.white,
                                   fontSize: 12,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ],
