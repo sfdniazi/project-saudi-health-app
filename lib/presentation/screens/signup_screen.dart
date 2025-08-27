@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:connectivity_plus/connectivity_plus.dart'; // 📶 Connectivity check
 import '../../core/app_theme.dart';
 import '../../services/firebase_service.dart';
+import '../../services/auth_utils.dart';
 import '../navigation/main_navigation.dart';
 import 'login_screen.dart';
 
@@ -302,7 +303,7 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
       // Update Firebase Auth display name
       await user.updateDisplayName(_nameController.text.trim());
 
-      // Create comprehensive user profile in Firestore
+      // Create comprehensive user profile in Firestore using detailed data
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
         'uid': user.uid,
         'email': _emailController.text.trim(),
@@ -318,6 +319,23 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
+
+      // Verify user details were created correctly using the new utility
+      try {
+        final userDetails = await fetchOrCreateUserDetails(user);
+        if (userDetails != null) {
+          debugPrint('Successfully verified user profile: ${userDetails.displayName}');
+        } else {
+          debugPrint('Warning: Could not verify user profile after creation');
+          // The user profile was still created via Firestore, so this is not critical
+        }
+      } catch (e) {
+        debugPrint('Error verifying user profile: $e');
+        if (e.toString().contains('List<Object') && e.toString().contains('PigeonUserDetails')) {
+          debugPrint('Detected type casting error during signup verification - continuing anyway');
+        }
+        // Continue anyway - the Firestore profile was already created above
+      }
 
       // Initialize user collections (with timeout)
       try {

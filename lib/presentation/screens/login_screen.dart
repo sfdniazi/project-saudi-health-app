@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // 👈 Firestore
 import 'package:connectivity_plus/connectivity_plus.dart'; // 📶 Connectivity check
 import '../../core/app_theme.dart';
+import '../../services/auth_utils.dart';
+import '../../services/firebase_service.dart';
 import '../navigation/main_navigation.dart';
 import 'signup_screen.dart';
 
@@ -60,33 +62,43 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   }
 
 
-  /// ✅ Ensure a users/{uid} document exists with sane defaults
-  Future<void> _ensureUserProfile(User user) async {
-    final docRef = _firestore.collection('users').doc(user.uid);
-    final snap = await docRef.get();
-
-    final email = user.email ?? '';
-    final derivedName = (user.displayName?.trim().isNotEmpty == true)
-        ? user.displayName!.trim()
-        : (email.contains('@') ? email.split('@').first : 'User');
-
-    if (!snap.exists) {
-      await docRef.set({
-        'email': email,
-        'displayName': derivedName,
-        'age': 25,            // default, user can edit later
-        'height': 170.0,      // cm
-        'idealWeight': 65.0,  // kg
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-    } else {
-      // Touch updatedAt so we know profile is valid
-      await docRef.set({
-        'updatedAt': FieldValue.serverTimestamp(),
-        if (snap.data()!['email'] == null) 'email': email,
-        if (snap.data()!['displayName'] == null) 'displayName': derivedName,
-      }, SetOptions(merge: true));
+  /// ✅ Fetch or create user details using the new auth utility with better error handling
+  Future<void> _fetchOrCreateUserProfile(User user) async {
+    try {
+      // The fetchOrCreateUserDetails function already returns PigeonUserDetails?
+      final userDetails = await fetchOrCreateUserDetails(user);
+      
+      if (userDetails != null) {
+        debugPrint('Successfully fetched/created user profile: ${userDetails.displayName}');
+      } else {
+        debugPrint('Failed to fetch/create user profile - using fallback');
+        // Fallback: try to get user profile directly from Firebase service
+        await _fallbackCreateProfile(user);
+      }
+    } catch (e) {
+      debugPrint('Error in _fetchOrCreateUserProfile: $e');
+      if (e.toString().contains('List<Object') && e.toString().contains('PigeonUserDetails')) {
+        debugPrint('Detected type casting error - using fallback method');
+        await _fallbackCreateProfile(user);
+      } else {
+        // Try fallback method for other errors too
+        await _fallbackCreateProfile(user);
+      }
+    }
+  }
+  
+  /// Fallback method to create user profile using Firebase service
+  Future<void> _fallbackCreateProfile(User user) async {
+    try {
+      await FirebaseService.createInitialUserProfile(
+        uid: user.uid,
+        email: user.email ?? '',
+        displayName: user.displayName,
+      );
+      debugPrint('Successfully created user profile using fallback method');
+    } catch (e) {
+      debugPrint('Fallback profile creation also failed: $e');
+      // Continue anyway - the user is still authenticated
     }
   }
 
@@ -135,8 +147,8 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
 
       final user = cred.user;
       if (user != null) {
-        // 👇 Create users/{uid} if missing (or fix minimal fields)
-        await _ensureUserProfile(user).timeout(
+        // 👇 Fetch or create user details using new utility
+        await _fetchOrCreateUserProfile(user).timeout(
           const Duration(seconds: 5),
           onTimeout: () {
             debugPrint('Profile creation timed out, but user is authenticated');
