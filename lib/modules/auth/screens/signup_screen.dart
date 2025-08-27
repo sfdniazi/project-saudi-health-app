@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:connectivity_plus/connectivity_plus.dart'; // 📶 Connectivity check
-import '../../core/app_theme.dart';
-import '../../services/firebase_service.dart';
-import '../../services/auth_utils.dart';
-import '../navigation/main_navigation.dart';
+import 'package:provider/provider.dart';
+
+import '../../../core/app_theme.dart';
+import '../../../presentation/navigation/main_navigation.dart';
+import '../providers/auth_provider.dart';
 import 'login_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -34,7 +32,6 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
   String _selectedUnits = 'Metric (kg, cm)';
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
-  bool _isLoading = false;
   int _currentPage = 0;
 
   // Animation controllers
@@ -52,6 +49,12 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
       CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
     );
     _fadeController.forward();
+
+    // Listen to auth state changes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      _listenToAuthChanges(authProvider);
+    });
   }
 
   @override
@@ -69,17 +72,88 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
     super.dispose();
   }
 
-  /// ✅ Check internet connectivity before attempting signup
-  Future<bool> _checkConnectivity() async {
-    try {
-      final connectivityResult = await (Connectivity().checkConnectivity());
-      return connectivityResult != ConnectivityResult.none;
-    } catch (e) {
-      return false; // Assume no connection if error occurs
+  void _listenToAuthChanges(AuthProvider authProvider) {
+    // Navigate to main screen when authenticated
+    if (authProvider.isAuthenticated) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _showSignupSuccessDialog();
+        }
+      });
+    }
+
+    // Show error dialog if there's an error
+    if (authProvider.errorMessage != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showErrorDialog(
+          'Signup Failed',
+          authProvider.errorMessage!,
+          showRetry: true,
+        );
+        authProvider.clearMessages();
+      });
+    }
+
+    // Show success message if available
+    if (authProvider.successMessage != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showSuccessSnackBar(authProvider.successMessage!);
+        authProvider.clearMessages();
+      });
     }
   }
 
-  /// ✅ Show error dialog with optional retry button
+  /// Create account using provider
+  Future<void> _createAccount() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    await authProvider.createUserWithEmailAndPassword(
+      email: _emailController.text.trim(),
+      password: _passwordController.text.trim(),
+      fullName: _nameController.text.trim(),
+      age: int.parse(_ageController.text.trim()),
+      gender: _selectedGender,
+      height: double.parse(_heightController.text.trim()),
+      weight: double.parse(_weightController.text.trim()),
+      idealWeight: double.parse(_idealWeightController.text.trim()),
+      units: _selectedUnits,
+    );
+  }
+
+  void _nextPage() {
+    if (_currentPage < 2) {
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  void _previousPage() {
+    if (_currentPage > 0) {
+      _pageController.previousPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  bool _validateCurrentPage() {
+    if (_currentPage == 0) {
+      return _nameController.text.trim().isNotEmpty &&
+             _emailController.text.trim().isNotEmpty &&
+             _passwordController.text.isNotEmpty &&
+             _confirmPasswordController.text == _passwordController.text &&
+             RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(_emailController.text.trim());
+    } else if (_currentPage == 1) {
+      return _ageController.text.trim().isNotEmpty &&
+             int.tryParse(_ageController.text.trim()) != null;
+    }
+    return true;
+  }
+
+  /// Show error dialog
   void _showErrorDialog(String title, String message, {bool showRetry = false}) {
     if (!mounted) return;
     
@@ -128,7 +202,7 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
               style: TextStyle(color: AppTheme.textSecondary),
             ),
           ),
-          if (showRetry) ...[
+          if (showRetry) ...{
             const SizedBox(width: 8),
             ElevatedButton(
               onPressed: () {
@@ -144,13 +218,13 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
               ),
               child: const Text('Retry'),
             ),
-          ],
+          },
         ],
       ),
     );
   }
 
-  /// ✅ Show signup success dialog with user guidelines
+  /// Show signup success dialog
   void _showSignupSuccessDialog() {
     if (!mounted) return;
     
@@ -221,218 +295,81 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
     );
   }
 
-  /// ✅ Enhanced create account with timeout, connectivity check, and user guidelines
-  Future<void> _createAccount() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    // Check connectivity first
-    final hasConnection = await _checkConnectivity();
-    if (!hasConnection) {
-      _showErrorDialog(
-        'No Internet Connection',
-        'Please check your internet connection and try again.',
-        showRetry: true,
-      );
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-      // 🕐 Apply 15-second timeout to the entire signup process
-      await Future.any([
-        _performSignup(),
-        Future.delayed(const Duration(seconds: 15), () {
-          throw Exception('Signup timed out. Please try again.');
-        })
-      ]);
-    } on FirebaseAuthException catch (e) {
-      String message;
-      String title = 'Signup Failed';
-
-      switch (e.code) {
-        case 'email-already-in-use':
-          title = 'Email Already Registered';
-          message = 'This email address is already registered. Please use a different email or try logging in.';
-          break;
-        case 'invalid-email':
-          message = 'Please enter a valid email address.';
-          break;
-        case 'weak-password':
-          message = 'Password should be at least 6 characters long and contain a mix of letters and numbers.';
-          break;
-        case 'network-request-failed':
-          title = 'Network Error';
-          message = 'Network error occurred. Please check your internet connection and try again.';
-          break;
-        case 'operation-not-allowed':
-          message = 'Email/password accounts are not enabled. Please contact support.';
-          break;
-        default:
-          message = 'Signup failed: ${e.message ?? 'Unknown error occurred'}. Please try again.';
-      }
-      
-      _showErrorDialog(title, message, showRetry: true);
-    } catch (e) {
-      String message;
-      String title = 'Signup Error';
-      
-      if (e.toString().contains('timed out')) {
-        title = 'Request Timeout';
-        message = 'The signup request timed out. Please check your connection and try again.';
-      } else {
-        message = 'An unexpected error occurred: ${e.toString()}. Please try again.';
-      }
-      
-      _showErrorDialog(title, message, showRetry: true);
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  /// ✅ Perform the actual signup process
-  Future<void> _performSignup() async {
-    // Create Firebase Auth user
-    final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-      email: _emailController.text.trim(),
-      password: _passwordController.text.trim(),
+  /// Show success snackbar
+  void _showSuccessSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppTheme.primaryGreen,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
     );
-
-    final user = credential.user;
-    if (user != null) {
-      // Update Firebase Auth display name
-      await user.updateDisplayName(_nameController.text.trim());
-
-      // Create comprehensive user profile in Firestore using detailed data
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-        'uid': user.uid,
-        'email': _emailController.text.trim(),
-        'displayName': _nameController.text.trim(),
-        'age': int.parse(_ageController.text.trim()),
-        'gender': _selectedGender,
-        'height': double.parse(_heightController.text.trim()),
-        'weight': double.parse(_weightController.text.trim()),
-        'idealWeight': double.parse(_idealWeightController.text.trim()),
-        'units': _selectedUnits,
-        'dailyGoal': _calculateDailyCalorieGoal(),
-        'notificationsEnabled': true,
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-
-      // Profile verification - HOTFIX: Skip PigeonUserDetails verification to avoid type casting errors
-      debugPrint('Successfully created user profile in Firestore: ${user.uid}');
-      // The user profile was created via Firestore above, so no additional verification needed
-
-      // Initialize user collections (with timeout)
-      try {
-        await FirebaseService.initializeUserCollections(user.uid).timeout(
-          const Duration(seconds: 5),
-          onTimeout: () {
-            debugPrint('User collections initialization timed out, but signup succeeded');
-            // Continue anyway - collections can be initialized later
-          },
-        );
-      } catch (e) {
-        debugPrint('Error initializing user collections: $e');
-        // Continue anyway - this is not critical for signup
-      }
-
-      // Show success dialog with user guidelines
-      if (mounted) {
-        _showSignupSuccessDialog();
-      }
-    }
-  }
-
-  int _calculateDailyCalorieGoal() {
-    final age = int.tryParse(_ageController.text.trim()) ?? 25;
-    final weight = double.tryParse(_weightController.text.trim()) ?? 70;
-    final height = double.tryParse(_heightController.text.trim()) ?? 170;
-    
-    // Basic BMR calculation (Mifflin-St Jeor Equation)
-    double bmr;
-    if (_selectedGender == 'Male') {
-      bmr = 10 * weight + 6.25 * height - 5 * age + 5;
-    } else {
-      bmr = 10 * weight + 6.25 * height - 5 * age - 161;
-    }
-    
-    // Assuming moderate activity level (1.55 multiplier)
-    return (bmr * 1.55).round();
-  }
-
-  void _nextPage() {
-    if (_currentPage < 2) {
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
-  }
-
-  void _previousPage() {
-    if (_currentPage > 0) {
-      _pageController.previousPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(gradient: AppTheme.headerGradient),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Header
-              _buildHeader(),
-              
-              // 🎨 Enhanced form pages with animation
-              Expanded(
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 600),
-                  curve: Curves.easeOut,
-                  decoration: BoxDecoration(
-                    color: AppTheme.surfaceLight,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(36),
-                      topRight: Radius.circular(36),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.08),
-                        blurRadius: 32,
-                        offset: const Offset(0, -8),
-                      ),
-                    ],
-                  ),
-                  child: FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: Form(
-                      key: _formKey,
-                      child: PageView(
-                        controller: _pageController,
-                        onPageChanged: (page) => setState(() => _currentPage = page),
-                        children: [
-                          _buildAccountInfoPage(),
-                          _buildPersonalInfoPage(),
-                          _buildPhysicalInfoPage(),
+      body: Consumer<AuthProvider>(
+        builder: (context, authProvider, child) {
+          // Listen to auth changes
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _listenToAuthChanges(authProvider);
+          });
+
+          return Container(
+            decoration: const BoxDecoration(gradient: AppTheme.headerGradient),
+            child: SafeArea(
+              child: Column(
+                children: [
+                  // Header
+                  _buildHeader(),
+                  
+                  // Form pages
+                  Expanded(
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 600),
+                      curve: Curves.easeOut,
+                      decoration: BoxDecoration(
+                        color: AppTheme.surfaceLight,
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(36),
+                          topRight: Radius.circular(36),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 32,
+                            offset: const Offset(0, -8),
+                          ),
                         ],
                       ),
+                      child: FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: Form(
+                          key: _formKey,
+                          child: PageView(
+                            controller: _pageController,
+                            onPageChanged: (page) => setState(() => _currentPage = page),
+                            children: [
+                              _buildAccountInfoPage(),
+                              _buildPersonalInfoPage(),
+                              _buildPhysicalInfoPage(authProvider.isLoading),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                  
+                  // Bottom Navigation
+                  _buildBottomNavigation(),
+                ],
               ),
-              
-              // Bottom Navigation
-              _buildBottomNavigation(),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -465,34 +402,34 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
           ),
           const SizedBox(height: 20),
           
-              // 🎨 Enhanced progress indicator with animations
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(3, (index) {
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOut,
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    width: _currentPage == index ? 36 : 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: _currentPage == index 
-                          ? Colors.white 
-                          : Colors.white.withValues(alpha: 0.4),
-                      borderRadius: BorderRadius.circular(6),
-                      boxShadow: _currentPage == index 
-                          ? [
-                              BoxShadow(
-                                color: Colors.white.withValues(alpha: 0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ]
-                          : null,
-                    ),
-                  );
-                }),
-              ),
+          // Enhanced progress indicator with animations
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(3, (index) {
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                width: _currentPage == index ? 36 : 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: _currentPage == index 
+                      ? Colors.white 
+                      : Colors.white.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(6),
+                  boxShadow: _currentPage == index 
+                      ? [
+                          BoxShadow(
+                            color: Colors.white.withValues(alpha: 0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
+                ),
+              );
+            }),
+          ),
         ],
       ),
     );
@@ -702,7 +639,7 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
     );
   }
 
-  Widget _buildPhysicalInfoPage() {
+  Widget _buildPhysicalInfoPage(bool isLoading) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(32),
       child: Column(
@@ -826,7 +763,7 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
               ],
             ),
             child: ElevatedButton(
-              onPressed: _isLoading ? null : _createAccount,
+              onPressed: isLoading ? null : _createAccount,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.transparent,
                 shadowColor: Colors.transparent,
@@ -834,7 +771,7 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
                   borderRadius: BorderRadius.circular(20),
                 ),
               ),
-              child: _isLoading
+              child: isLoading
                   ? const SizedBox(
                       width: 24,
                       height: 24,
@@ -919,20 +856,6 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
         ],
       ),
     );
-  }
-
-  bool _validateCurrentPage() {
-    if (_currentPage == 0) {
-      return _nameController.text.trim().isNotEmpty &&
-             _emailController.text.trim().isNotEmpty &&
-             _passwordController.text.isNotEmpty &&
-             _confirmPasswordController.text == _passwordController.text &&
-             RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(_emailController.text.trim());
-    } else if (_currentPage == 1) {
-      return _ageController.text.trim().isNotEmpty &&
-             int.tryParse(_ageController.text.trim()) != null;
-    }
-    return true;
   }
 
   Widget _buildTextField({

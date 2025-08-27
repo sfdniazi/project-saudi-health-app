@@ -1,10 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // 👈 Firestore
-import 'package:connectivity_plus/connectivity_plus.dart'; // 📶 Connectivity check
-import '../../core/app_theme.dart';
-import '../navigation/main_navigation.dart';
-import 'signup_screen.dart';
+import '../../modules/auth/screens/login_screen.dart' as auth_module;
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -13,46 +8,18 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin {
-  final _emailCtrl = TextEditingController();
-  final _passCtrl = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
-
-  bool _isPasswordVisible = false;
-  bool _isLoading = false;
-
-  late AnimationController _fadeController;
-  late AnimationController _slideController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
-
-  // 🔥 Firestore instance
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
+class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    _fadeController = AnimationController(duration: const Duration(milliseconds: 800), vsync: this);
-    _slideController = AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
-
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
-    );
-
-    _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero)
-        .animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic));
-
-    _fadeController.forward();
-    _slideController.forward();
-  }
-
-  @override
-  void dispose() {
-    _emailCtrl.dispose();
-    _passCtrl.dispose();
-    _fadeController.dispose();
-    _slideController.dispose();
-    super.dispose();
+    // Redirect to the new auth module login screen after a short delay
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const auth_module.LoginScreen()),
+        );
+      }
+    });
   }
 
   void _togglePasswordVisibility() {
@@ -60,33 +27,61 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   }
 
 
-  /// ✅ Ensure a users/{uid} document exists with sane defaults
-  Future<void> _ensureUserProfile(User user) async {
-    final docRef = _firestore.collection('users').doc(user.uid);
-    final snap = await docRef.get();
-
-    final email = user.email ?? '';
-    final derivedName = (user.displayName?.trim().isNotEmpty == true)
-        ? user.displayName!.trim()
-        : (email.contains('@') ? email.split('@').first : 'User');
-
-    if (!snap.exists) {
-      await docRef.set({
-        'email': email,
-        'displayName': derivedName,
-        'age': 25,            // default, user can edit later
-        'height': 170.0,      // cm
-        'idealWeight': 65.0,  // kg
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-    } else {
-      // Touch updatedAt so we know profile is valid
-      await docRef.set({
-        'updatedAt': FieldValue.serverTimestamp(),
-        if (snap.data()!['email'] == null) 'email': email,
-        if (snap.data()!['displayName'] == null) 'displayName': derivedName,
-      }, SetOptions(merge: true));
+  /// ✅ HOTFIX: Completely bypass PigeonUserDetails to avoid type casting issues
+  Future<void> _fetchOrCreateUserProfile(User user) async {
+    try {
+      debugPrint('Starting profile creation/fetch for user: ${user.uid}');
+      
+      // Completely avoid PigeonUserDetails and work directly with Firestore
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      
+      if (!userDoc.exists) {
+        // Create user document directly without PigeonUserDetails
+        final email = user.email ?? '';
+        final displayName = user.displayName ?? 
+            (email.contains('@') ? email.split('@').first : 'User');
+        
+        final userData = {
+          'uid': user.uid,
+          'email': email,
+          'displayName': displayName,
+          'age': 25,
+          'gender': 'Male',
+          'height': 170.0,
+          'weight': 70.0,
+          'idealWeight': 65.0,
+          'dailyGoal': 2000,
+          'units': 'Metric (kg, cm)',
+          'notificationsEnabled': true,
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        };
+        
+        await _firestore.collection('users').doc(user.uid).set(userData);
+        debugPrint('Successfully created user profile directly in Firestore');
+      } else {
+        debugPrint('User profile already exists in Firestore');
+      }
+      
+    } catch (e) {
+      debugPrint('Error in profile creation: $e');
+      // Even if profile creation fails, continue with login
+      // The user is already authenticated with Firebase Auth
+    }
+  }
+  
+  /// Fallback method to create user profile using Firebase service
+  Future<void> _fallbackCreateProfile(User user) async {
+    try {
+      await FirebaseService.createInitialUserProfile(
+        uid: user.uid,
+        email: user.email ?? '',
+        displayName: user.displayName,
+      );
+      debugPrint('Successfully created user profile using fallback method');
+    } catch (e) {
+      debugPrint('Fallback profile creation also failed: $e');
+      // Continue anyway - the user is still authenticated
     }
   }
 
@@ -135,8 +130,8 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
 
       final user = cred.user;
       if (user != null) {
-        // 👇 Create users/{uid} if missing (or fix minimal fields)
-        await _ensureUserProfile(user).timeout(
+        // 👇 Fetch or create user details using new utility
+        await _fetchOrCreateUserProfile(user).timeout(
           const Duration(seconds: 5),
           onTimeout: () {
             debugPrint('Profile creation timed out, but user is authenticated');
@@ -298,80 +293,11 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(gradient: AppTheme.headerGradient),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Top section
-              Expanded(
-                flex: 2,
-                child: FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // 🎨 Enhanced app icon with smooth animation
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 1000),
-                        curve: Curves.elasticOut,
-                        width: 88,
-                        height: 88,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.white.withValues(alpha: 0.25),
-                              Colors.white.withValues(alpha: 0.15),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(28),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.4),
-                            width: 2,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.white.withValues(alpha: 0.2),
-                              blurRadius: 20,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(Icons.restaurant_menu, color: Colors.white, size: 44),
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        'Nabd Al-Hayah',
-                        style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                          color: Colors.white,
-                          fontSize: 36,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Welcome back!',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: Colors.white.withValues(alpha: 0.9),
-                          fontSize: 18,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Sign in to continue tracking your nutrition',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.white.withValues(alpha: 0.7),
-                          fontSize: 14,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+    return const Scaffold(
+      body: Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
 
               // 🎨 Enhanced form section with subtle animation
               Expanded(
