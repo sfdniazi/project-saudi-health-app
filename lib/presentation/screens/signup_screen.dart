@@ -6,7 +6,7 @@ import '../../core/app_theme.dart';
 import '../../services/firebase_service.dart';
 import '../../services/auth_utils.dart';
 import '../navigation/main_navigation.dart';
-import 'login_screen.dart';
+import '../../modules/auth/screens/login_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});

@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
 import '../../core/app_theme.dart';
 
-import '../screens/home_screen.dart';
-import '../screens/statistics_screen.dart';
-import '../screens/profile_screen.dart';
-import '../screens/activity_screen.dart';
-import '../screens/food_logging_screen.dart';
-import '../widgets/animated_bottom_nav.dart';
+// Use the new dashboard navigation screen
+import '../../modules/dashboard/screens/dashboard_navigation_screen.dart';
+import '../../modules/auth/providers/auth_provider.dart' as custom_auth;
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -18,73 +16,70 @@ class MainNavigation extends StatefulWidget {
 }
 
 class _MainNavigationState extends State<MainNavigation> {
-  int _selectedIndex = 0;
-
-  void _onTap(int idx) => setState(() => _selectedIndex = idx);
-
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-
-    if (user == null) {
-      return Container(
-        decoration: const BoxDecoration(gradient: AppTheme.headerGradient),
-        child: Center(
-          child: Text(
-            "⚠️ User not logged in",
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      );
-    }
-
-    return FutureBuilder<DocumentSnapshot>(
-      future: FirebaseFirestore.instance.collection("users").doc(user.uid).get(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Container(
-            decoration: const BoxDecoration(gradient: AppTheme.headerGradient),
-            child: const Center(
-              child: CircularProgressIndicator(color: Colors.white),
-            ),
-          );
-        }
-
-        if (!snapshot.hasData || !snapshot.data!.exists) {
+    return Consumer<custom_auth.AuthProvider>(
+      builder: (context, authProvider, child) {
+        // Check if user is authenticated
+        if (!authProvider.isAuthenticated || authProvider.currentUser == null) {
           return Container(
             decoration: const BoxDecoration(gradient: AppTheme.headerGradient),
             child: Center(
-              child: Text(
-                "⚠️ No user profile found in Firestore",
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.warning_amber_rounded,
+                    color: Colors.white,
+                    size: 48,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "⚠️ User not authenticated",
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Please log in to continue",
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.white70,
+                    ),
+                  ),
+                ],
               ),
             ),
           );
         }
 
-        // User profile exists, show the main navigation
+        // Show loading state if auth is still loading
+        if (authProvider.isLoading) {
+          return Container(
+            decoration: const BoxDecoration(gradient: AppTheme.headerGradient),
+            child: const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(color: Colors.white),
+                  SizedBox(height: 16),
+                  Text(
+                    "Loading...",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
 
-        final pages = [
-          const HomeScreen(),
-          const ActivityScreen(), 
-          const FoodLoggingScreen(),
-          const StatisticsScreen(),
-          const ProfileScreen(),
-        ];
-
-        return Scaffold(
-          body: pages[_selectedIndex],
-          bottomNavigationBar: AnimatedBottomNav(
-            currentIndex: _selectedIndex,
-            onTap: _onTap,
-          ),
-        );
+        // User is authenticated, show dashboard navigation
+        return const DashboardNavigationScreen();
       },
     );
   }

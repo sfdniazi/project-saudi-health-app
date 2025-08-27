@@ -9,6 +9,9 @@ import 'core/error_handler.dart'; // ⚠️ Error handling
 import 'presentation/screens/start_page.dart';
 import 'modules/auth/screens/login_screen.dart'; // 📁 New auth module structure
 import 'modules/auth/providers/auth_provider.dart' as custom_auth; // 🚀 Auth provider
+import 'modules/dashboard/providers/dashboard_provider.dart'; // 🚀 Dashboard provider
+import 'modules/home/providers/home_provider.dart'; // 🚀 Home provider
+import 'modules/activity/providers/activity_provider.dart'; // 🚀 Activity provider
 import 'presentation/navigation/main_navigation.dart';
 import 'presentation/screens/splash_screen.dart';
 
@@ -66,6 +69,18 @@ class _NabdAlHayahAppState extends State<NabdAlHayahApp> {
         // 🚀 Auth Provider for global authentication state management
         ChangeNotifierProvider(
           create: (_) => custom_auth.AuthProvider(),
+        ),
+        // 🚀 Dashboard Provider for navigation state management
+        ChangeNotifierProvider(
+          create: (_) => DashboardProvider(),
+        ),
+        // 🚀 Home Provider for home screen state management
+        ChangeNotifierProvider(
+          create: (_) => HomeProvider(),
+        ),
+        // 🚀 Activity Provider for activity screen state management
+        ChangeNotifierProvider(
+          create: (_) => ActivityProvider(),
         ),
         // Add more providers here as needed
       ],

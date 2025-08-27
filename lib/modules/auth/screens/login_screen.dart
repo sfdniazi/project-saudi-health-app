@@ -68,9 +68,18 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     if (authProvider.errorMessage != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
+          String errorTitle = 'Login Failed';
+          String errorMessage = authProvider.errorMessage!;
+          
+          // Check for specific type casting error
+          if (errorMessage.contains("type 'List<Object?>' is not a subtype of type 'PigeonUserDetails?'")) {
+            errorTitle = 'Login Failed';
+            errorMessage = 'There was a temporary issue with your login. Please try again.';
+          }
+          
           _showErrorDialog(
-            'Login Failed',
-            authProvider.errorMessage!,
+            errorTitle,
+            errorMessage,
             showRetry: true,
           );
           authProvider.clearMessages();
@@ -204,198 +213,234 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
+    // Get keyboard height to detect if keyboard is visible
+    final MediaQueryData mediaQuery = MediaQuery.of(context);
+    final bool isKeyboardVisible = mediaQuery.viewInsets.bottom > 0;
+    
     return Scaffold(
+      // Prevent the scaffold from resizing when keyboard appears
+      resizeToAvoidBottomInset: false,
       body: Consumer<AuthProvider>(
         builder: (context, authProvider, child) {
           // Listen to auth changes
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            _listenToAuthChanges(authProvider);
+            _handleAuthStateChange(authProvider);
           });
 
           return Container(
             decoration: const BoxDecoration(
-              gradient: AppTheme.primaryGradient,
+              gradient: AppTheme.headerGradient,
             ),
             child: SafeArea(
-              child: Column(
-                children: [
-                  // Header
-                  Expanded(
-                    flex: 2,
-                    child: FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: Padding(
-                        padding: const EdgeInsets.all(32.0),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              width: 120,
-                              height: 120,
+              child: SingleChildScrollView(
+                // Add padding to account for keyboard
+                padding: EdgeInsets.only(
+                  bottom: mediaQuery.viewInsets.bottom,
+                ),
+                physics: const ClampingScrollPhysics(),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: mediaQuery.size.height - 
+                        mediaQuery.padding.top - 
+                        mediaQuery.padding.bottom,
+                  ),
+                  child: IntrinsicHeight(
+                    child: Column(
+                      children: [
+                        // Header - Adaptive height
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          height: isKeyboardVisible 
+                              ? 80 // Much smaller height when keyboard is visible
+                              : 280, // Full height when keyboard is hidden
+                          child: FadeTransition(
+                            opacity: _fadeAnimation,
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 32.0,
+                                vertical: isKeyboardVisible ? 8.0 : 32.0,
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // Show icon only when keyboard is hidden
+                                  if (!isKeyboardVisible) ...[
+                                    Container(
+                                      width: 80,
+                                      height: 80,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(20),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(alpha: 0.1),
+                                            blurRadius: 16,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
+                                      child: const Icon(
+                                        Icons.favorite,
+                                        size: 40,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                  ],
+                                  Text(
+                                    'Welcome Back',
+                                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: isKeyboardVisible ? 24 : 32,
+                                    ),
+                                  ),
+                                  if (!isKeyboardVisible) ...[
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Sign in to continue your wellness journey',
+                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        color: Colors.white.withValues(alpha: 0.8),
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        // Form section - Flexible height
+                        Flexible(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeOut,
                               decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(24),
+                                color: AppTheme.surfaceLight,
+                                borderRadius: BorderRadius.circular(36),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.1),
-                                    blurRadius: 24,
-                                    offset: const Offset(0, 8),
+                                    color: Colors.black.withValues(alpha: 0.08),
+                                    blurRadius: 32,
+                                    offset: const Offset(0, -8),
                                   ),
                                 ],
                               ),
-                              child: const Icon(
-                                Icons.favorite,
-                                size: 64,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            Text(
-                              'Welcome Back',
-                              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 32,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Sign in to continue your wellness journey',
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                color: Colors.white.withValues(alpha: 0.8),
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // Form section
-                  Expanded(
-                    flex: 3,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 600),
-                      curve: Curves.easeOut,
-                      decoration: BoxDecoration(
-                        color: AppTheme.surfaceLight,
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(36),
-                          topRight: Radius.circular(36),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 32,
-                            offset: const Offset(0, -8),
-                          ),
-                        ],
-                      ),
-                      child: SlideTransition(
-                        position: _slideAnimation,
-                        child: FadeTransition(
-                          opacity: _fadeAnimation,
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(32, 40, 32, 32),
-                            child: SingleChildScrollView(
-                              physics: const BouncingScrollPhysics(),
-                              child: Form(
-                                key: _formKey,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                                  children: [
-                                    _buildTextField(
-                                      controller: _emailCtrl,
-                                      label: 'Email',
-                                      hint: 'Enter your email',
-                                      icon: Icons.email_outlined,
-                                      keyboardType: TextInputType.emailAddress,
-                                      validator: (value) {
-                                        if (value == null || value.isEmpty) {
-                                          return 'Please enter your email';
-                                        }
-                                        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                                          return 'Please enter a valid email';
-                                        }
-                                        return null;
-                                      },
+                              child: SlideTransition(
+                                position: _slideAnimation,
+                                child: FadeTransition(
+                                  opacity: _fadeAnimation,
+                                  child: Padding(
+                                    padding: EdgeInsets.fromLTRB(
+                                      32, 
+                                      isKeyboardVisible ? 24 : 40, 
+                                      32, 
+                                      32
                                     ),
-                                    const SizedBox(height: 20),
-                                    _buildTextField(
-                                      controller: _passCtrl,
-                                      label: 'Password',
-                                      hint: 'Enter your password',
-                                      icon: Icons.lock_outlined,
-                                      isPassword: true,
-                                      isPasswordVisible: _isPasswordVisible,
-                                      onTogglePassword: _togglePasswordVisibility,
-                                      validator: (value) {
-                                        if (value == null || value.isEmpty) {
-                                          return 'Please enter your password';
-                                        }
-                                        if (value.length < 6) {
-                                          return 'Password must be at least 6 characters';
-                                        }
-                                        return null;
-                                      },
-                                    ),
-                                    const SizedBox(height: 16),
-
-                                    // Forgot password
-                                    Align(
-                                      alignment: Alignment.centerRight,
-                                      child: TextButton(
-                                        onPressed: _resetPassword,
-                                        child: const Text(
-                                          "Forgot Password?",
-                                          style: TextStyle(
-                                            color: AppTheme.primaryGreen,
-                                            fontWeight: FontWeight.w600,
+                                    child: Form(
+                                      key: _formKey,
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                                        children: [
+                                          _buildTextField(
+                                            controller: _emailCtrl,
+                                            label: 'Email',
+                                            hint: 'Enter your email',
+                                            icon: Icons.email_outlined,
+                                            keyboardType: TextInputType.emailAddress,
+                                            validator: (value) {
+                                              if (value == null || value.isEmpty) {
+                                                return 'Please enter your email';
+                                              }
+                                              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                                                return 'Please enter a valid email';
+                                              }
+                                              return null;
+                                            },
                                           ),
-                                        ),
-                                      ),
-                                    ),
-
-                                    const SizedBox(height: 8),
-                                    _buildSubmitButton(authProvider.isLoading),
-                                    const SizedBox(height: 20),
-
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Text(
-                                          'Don\'t have an account? ',
-                                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                            color: AppTheme.textSecondary,
+                                          const SizedBox(height: 20),
+                                          _buildTextField(
+                                            controller: _passCtrl,
+                                            label: 'Password',
+                                            hint: 'Enter your password',
+                                            icon: Icons.lock_outlined,
+                                            isPassword: true,
+                                            isPasswordVisible: _isPasswordVisible,
+                                            onTogglePassword: _togglePasswordVisibility,
+                                            validator: (value) {
+                                              if (value == null || value.isEmpty) {
+                                                return 'Please enter your password';
+                                              }
+                                              if (value.length < 6) {
+                                                return 'Password must be at least 6 characters';
+                                              }
+                                              return null;
+                                            },
                                           ),
-                                        ),
-                                        GestureDetector(
-                                          onTap: () {
-                                            Navigator.of(context).push(
-                                              MaterialPageRoute(builder: (_) => const SignUpScreen()),
-                                            );
-                                          },
-                                          child: Text(
-                                            'Sign Up',
-                                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                              color: AppTheme.primaryGreen,
-                                              fontWeight: FontWeight.w600,
+                                          const SizedBox(height: 16),
+
+                                          // Forgot password
+                                          Align(
+                                            alignment: Alignment.centerRight,
+                                            child: TextButton(
+                                              onPressed: _resetPassword,
+                                              child: const Text(
+                                                "Forgot Password?",
+                                                style: TextStyle(
+                                                  color: AppTheme.primaryGreen,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                      ],
+
+                                          const SizedBox(height: 8),
+                                          _buildSubmitButton(authProvider.isLoading),
+                                          const SizedBox(height: 20),
+
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Text(
+                                                'Don\'t have an account? ',
+                                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                                  color: AppTheme.textSecondary,
+                                                ),
+                                              ),
+                                              GestureDetector(
+                                                onTap: () {
+                                                  Navigator.of(context).push(
+                                                    MaterialPageRoute(builder: (_) => const SignUpScreen()),
+                                                  );
+                                                },
+                                                child: Text(
+                                                  'Sign Up',
+                                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                                    color: AppTheme.primaryGreen,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ],
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
-                ],
+                ),
               ),
             ),
           );
