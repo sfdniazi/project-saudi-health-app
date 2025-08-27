@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 import '../../core/app_theme.dart';
 import '../../core/consent_manager.dart'; // 🔒 Privacy consent
 import '../widgets/nutrient_indicator.dart';
@@ -7,6 +8,7 @@ import '../widgets/animated_user_avatar.dart'; // 🎨 Animated avatar
 import '../../services/firebase_service.dart';
 import '../../models/user_model.dart';
 import '../../main.dart'; // 🎨 For ThemeModeProvider
+import '../../modules/auth/providers/auth_provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -664,11 +666,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () async {
-              await _auth.signOut();
-              Navigator.pop(context);
-              Navigator.pushReplacementNamed(context, '/login');
-            },
+            onPressed: () => _performLogout(),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.accentOrange,
             ),
@@ -677,6 +675,70 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
     );
+  }
+
+  /// ✅ Optimized logout with loading state and timeout
+  Future<void> _performLogout() async {
+    // Show loading indicator immediately
+    Navigator.pop(context); // Close dialog
+    
+    // Show loading overlay
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => WillPopScope(
+        onWillPop: () async => false,
+        child: const Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(color: AppTheme.primaryGreen),
+                  SizedBox(height: 16),
+                  Text('Logging out...'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    try {
+      // Perform logout with timeout to prevent hanging
+      await _auth.signOut().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          // Even if sign out times out, we can still navigate
+          // The user will be signed out locally
+        },
+      );
+      
+      // Navigate to login screen
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/login',
+          (route) => false, // Remove all previous routes
+        );
+      }
+    } catch (e) {
+      // Even if there's an error, proceed with navigation
+      // The user's local session is still cleared
+      debugPrint('Logout error (non-critical): $e');
+      
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/login',
+          (route) => false,
+        );
+      }
+    }
   }
 
   // ==============================

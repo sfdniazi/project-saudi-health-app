@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/app_theme.dart';
-import 'login_screen.dart';
+import '../../modules/auth/screens/login_screen.dart';
 
 class StartPage extends StatefulWidget {
   const StartPage({super.key});
