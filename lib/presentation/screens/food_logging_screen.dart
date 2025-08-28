@@ -9,14 +9,14 @@ import '../../presentation/widgets/custom_appbar.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class FoodLoggingScreen extends StatefulWidget {
-  const FoodLoggingScreen({super.key});
+class OldFoodLoggingScreen extends StatefulWidget {
+  const OldFoodLoggingScreen({super.key});
 
   @override
-  State<FoodLoggingScreen> createState() => _FoodLoggingScreenState();
+  State<OldFoodLoggingScreen> createState() => _OldFoodLoggingScreenState();
 }
 
-class _FoodLoggingScreenState extends State<FoodLoggingScreen>
+class _OldFoodLoggingScreenState extends State<OldFoodLoggingScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;

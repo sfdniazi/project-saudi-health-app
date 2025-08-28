@@ -7,14 +7,14 @@ import '../../services/firebase_service.dart';
 import '../../models/user_model.dart';
 import '../../models/food_model.dart';
 
-class StatisticsScreen extends StatefulWidget {
-  const StatisticsScreen({super.key});
+class OldStatisticsScreen extends StatefulWidget {
+  const OldStatisticsScreen({super.key});
 
   @override
-  State<StatisticsScreen> createState() => _StatisticsScreenState();
+  State<OldStatisticsScreen> createState() => _OldStatisticsScreenState();
 }
 
-class _StatisticsScreenState extends State<StatisticsScreen> {
+class _OldStatisticsScreenState extends State<OldStatisticsScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 

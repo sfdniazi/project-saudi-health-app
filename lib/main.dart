@@ -12,6 +12,9 @@ import 'modules/auth/providers/auth_provider.dart' as custom_auth; // 🚀 Auth 
 import 'modules/dashboard/providers/dashboard_provider.dart'; // 🚀 Dashboard provider
 import 'modules/home/providers/home_provider.dart'; // 🚀 Home provider
 import 'modules/activity/providers/activity_provider.dart'; // 🚀 Activity provider
+import 'modules/food_logging/providers/food_logging_provider.dart'; // 🚀 Food Logging provider
+import 'modules/profile/providers/profile_provider.dart'; // 🚀 Profile provider
+import 'services/global_step_counter_provider.dart'; // 🚀 Global Step Counter provider
 import 'presentation/navigation/main_navigation.dart';
 import 'presentation/screens/splash_screen.dart';
 
@@ -82,6 +85,18 @@ class _NabdAlHayahAppState extends State<NabdAlHayahApp> {
         ChangeNotifierProvider(
           create: (_) => ActivityProvider(),
         ),
+        // 🚀 Food Logging Provider for food logging screen state management
+        ChangeNotifierProvider(
+          create: (_) => FoodLoggingProvider(),
+        ),
+        // 🚀 Profile Provider for profile screen state management
+        ChangeNotifierProvider(
+          create: (_) => ProfileProvider(),
+        ),
+        // 🚀 Global Step Counter Provider for real-time step counting across all screens
+        ChangeNotifierProvider(
+          create: (_) => GlobalStepCounterProvider(),
+        ),
         // Add more providers here as needed
       ],
       child: MaterialApp(
@@ -119,9 +134,9 @@ class _RootScreenState extends State<RootScreen> {
           return const SplashScreen();
         }
 
-        // User is logged in → go to main navigation
+        // User is logged in → initialize step counter and go to main navigation
         if (snapshot.hasData) {
-          return const MainNavigation();
+          return const MainNavigationWithStepCounter();
         }
 
         // User not logged in → show start page first, then login
@@ -151,5 +166,54 @@ class ThemeModeProvider extends InheritedWidget {
   @override
   bool updateShouldNotify(covariant ThemeModeProvider oldWidget) {
     return updateThemeMode != oldWidget.updateThemeMode;
+  }
+}
+
+/// Wrapper widget that initializes global step counter before showing main navigation
+class MainNavigationWithStepCounter extends StatefulWidget {
+  const MainNavigationWithStepCounter({super.key});
+
+  @override
+  State<MainNavigationWithStepCounter> createState() => _MainNavigationWithStepCounterState();
+}
+
+class _MainNavigationWithStepCounterState extends State<MainNavigationWithStepCounter> {
+  @override
+  void initState() {
+    super.initState();
+    // Initialize global step counter when user is logged in
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeGlobalStepCounter();
+    });
+  }
+
+  Future<void> _initializeGlobalStepCounter() async {
+    try {
+      final globalStepCounter = context.read<GlobalStepCounterProvider>();
+      await globalStepCounter.initialize();
+      
+      // Connect all providers to global step counter
+      final homeProvider = context.read<HomeProvider>();
+      homeProvider.setGlobalStepCounter(globalStepCounter);
+      
+      final dashboardProvider = context.read<DashboardProvider>();
+      dashboardProvider.setGlobalStepCounter(globalStepCounter);
+      
+      final profileProvider = context.read<ProfileProvider>();
+      profileProvider.setGlobalStepCounter(globalStepCounter);
+      
+      final activityProvider = context.read<ActivityProvider>();
+      activityProvider.setGlobalStepCounter(globalStepCounter);
+      
+      debugPrint('Global step counter initialized and connected to all providers successfully');
+    } catch (e) {
+      debugPrint('Failed to initialize global step counter: $e');
+      // Don't prevent app from working if step counter fails
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const MainNavigation();
   }
 }
