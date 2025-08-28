@@ -8,14 +8,14 @@ import '../../models/hydration_model.dart';
 import '../../models/user_model.dart';
 import '../../presentation/widgets/custom_appbar.dart';
 
-class ActivityScreen extends StatefulWidget {
-  const ActivityScreen({super.key});
+class OldActivityScreen extends StatefulWidget {
+  const OldActivityScreen({super.key});
 
   @override
-  State<ActivityScreen> createState() => _ActivityScreenState();
+  State<OldActivityScreen> createState() => _OldActivityScreenState();
 }
 
-class _ActivityScreenState extends State<ActivityScreen>
+class _OldActivityScreenState extends State<OldActivityScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:provider/provider.dart';
 import '../../core/app_theme.dart';
 import '../../core/consent_manager.dart'; // 🔒 Privacy consent
 import '../widgets/nutrient_indicator.dart';
@@ -8,16 +7,15 @@ import '../widgets/animated_user_avatar.dart'; // 🎨 Animated avatar
 import '../../services/firebase_service.dart';
 import '../../models/user_model.dart';
 import '../../main.dart'; // 🎨 For ThemeModeProvider
-import '../../modules/auth/providers/auth_provider.dart';
 
-class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+class OldProfileScreen extends StatefulWidget {
+  const OldProfileScreen({super.key});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  State<OldProfileScreen> createState() => _OldProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _OldProfileScreenState extends State<OldProfileScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   bool _notificationsEnabled = true;
@@ -1153,7 +1151,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         onTap: _showUnitDialog,
                       ),
                       const Divider(height: 1),
-                      // 🎨 Theme setting removed - using light theme only
+                      // 🎨 Theme settings - restored for dark/light mode switching
+                      ListTile(
+                        leading: const Icon(Icons.palette_outlined, color: AppTheme.primaryGreen),
+                        title: const Text('Theme'),
+                        subtitle: Text({
+                          ThemeMode.light: 'Light Mode',
+                          ThemeMode.dark: 'Dark Mode',
+                          ThemeMode.system: 'System Default',
+                        }[_currentThemeMode] ?? 'System Default'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: _showThemeSettings,
+                      ),
+                      const Divider(height: 1),
                       ListTile(
                         leading: const Icon(Icons.notifications_outlined,
                             color: AppTheme.accentBlack),
@@ -1217,16 +1227,21 @@ class _StatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 🎨 Always use light theme colors
+    // 🎨 Theme-aware colors for dark/light mode support
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppTheme.surfaceLight, // Always use light surface
+          color: isDark ? AppTheme.surfaceDarkCard : AppTheme.surfaceLight,
           borderRadius: BorderRadius.circular(16),
+          border: isDark ? Border.all(color: AppTheme.dividerDark, width: 0.5) : null,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: isDark 
+                  ? Colors.black.withOpacity(0.4)
+                  : Colors.black.withOpacity(0.06),
               blurRadius: 14,
               offset: const Offset(0, 6),
             ),
@@ -1241,8 +1256,8 @@ class _StatTile extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   label,
-                  style: const TextStyle(
-                    color: AppTheme.textSecondary, // Always use light text
+                  style: TextStyle(
+                    color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondary,
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
@@ -1255,18 +1270,18 @@ class _StatTile extends StatelessWidget {
               children: [
                 Text(
                   value,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w800,
-                    color: AppTheme.textPrimary, // Always use light text
+                    color: isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimary,
                   ),
                 ),
                 if (unit.isNotEmpty) ...[
                   const SizedBox(width: 4),
                   Text(
                     unit,
-                    style: const TextStyle(
-                      color: AppTheme.textSecondary, // Always use light text
+                    style: TextStyle(
+                      color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondary,
                       fontSize: 14,
                     ),
                   ),

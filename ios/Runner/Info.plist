@@ -45,5 +45,8 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- Motion and Fitness permissions for step counting -->
+	<key>NSMotionUsageDescription</key>
+	<string>This app needs access to motion data to track your daily steps and provide accurate activity insights.</string>
 </dict>
 </plist>
