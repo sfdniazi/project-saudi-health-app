@@ -442,9 +442,9 @@ class _OldProfileScreenState extends State<OldProfileScreen> {
                         ),
                         items: ['Male', 'Female', 'Other']
                             .map((gender) => DropdownMenuItem(
-                                  value: gender,
-                                  child: Text(gender),
-                                ))
+                          value: gender,
+                          child: Text(gender),
+                        ))
                             .toList(),
                         onChanged: (value) {
                           setModalState(() {
@@ -513,9 +513,9 @@ class _OldProfileScreenState extends State<OldProfileScreen> {
                         ),
                         items: ['Metric (kg, cm)', 'Imperial (lb, in)']
                             .map((units) => DropdownMenuItem(
-                                  value: units,
-                                  child: Text(units),
-                                ))
+                          value: units,
+                          child: Text(units),
+                        ))
                             .toList(),
                         onChanged: (value) {
                           setModalState(() {
@@ -546,7 +546,7 @@ class _OldProfileScreenState extends State<OldProfileScreen> {
                         idealWeight: double.parse(idealWeightController.text.trim()),
                         units: selectedUnits,
                       );
-                      
+
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -675,29 +675,25 @@ class _OldProfileScreenState extends State<OldProfileScreen> {
     );
   }
 
-  /// ✅ Optimized logout with loading state and timeout
+  /// ✅ Optimized logout with loading state and redirect to splash
   Future<void> _performLogout() async {
-    // Show loading indicator immediately
-    Navigator.pop(context); // Close dialog
-    
+    Navigator.pop(context); // Close confirm dialog
+
     // Show loading overlay
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => WillPopScope(
-        onWillPop: () async => false,
-        child: const Center(
-          child: Card(
-            child: Padding(
-              padding: EdgeInsets.all(20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(color: AppTheme.primaryGreen),
-                  SizedBox(height: 16),
-                  Text('Logging out...'),
-                ],
-              ),
+      builder: (_) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(color: AppTheme.primaryGreen),
+                SizedBox(height: 16),
+                Text('Logging out...'),
+              ],
             ),
           ),
         ),
@@ -705,37 +701,15 @@ class _OldProfileScreenState extends State<OldProfileScreen> {
     );
 
     try {
-      // Perform logout with timeout to prevent hanging
-      await _auth.signOut().timeout(
-        const Duration(seconds: 5),
-        onTimeout: () {
-          // Even if sign out times out, we can still navigate
-          // The user will be signed out locally
-        },
-      );
-      
-      // Navigate to login screen
-      if (mounted) {
-        Navigator.pop(context); // Close loading dialog
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/login',
-          (route) => false, // Remove all previous routes
-        );
-      }
+      await _auth.signOut().timeout(const Duration(seconds: 5));
     } catch (e) {
-      // Even if there's an error, proceed with navigation
-      // The user's local session is still cleared
       debugPrint('Logout error (non-critical): $e');
-      
-      if (mounted) {
-        Navigator.pop(context); // Close loading dialog
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/login',
-          (route) => false,
-        );
-      }
+    }
+
+    if (mounted) {
+      Navigator.pop(context); // Close loading overlay
+      // Navigate to splash screen, clearing all previous routes
+      Navigator.pushNamedAndRemoveUntil(context, '/splash', (route) => false);
     }
   }
 
@@ -767,9 +741,12 @@ class _OldProfileScreenState extends State<OldProfileScreen> {
   Widget build(BuildContext context) {
     final user = _auth.currentUser;
 
+    // 🔧 FIX: show spinner instead of "Please log in to view profile"
     if (user == null) {
       return const Scaffold(
-        body: Center(child: Text('Please log in to view profile')),
+        body: Center(
+          child: CircularProgressIndicator(color: AppTheme.primaryGreen),
+        ),
       );
     }
 
@@ -846,7 +823,7 @@ class _OldProfileScreenState extends State<OldProfileScreen> {
                           ),
                         );
                       }
-                      
+
                       if (createSnapshot.hasError) {
                         return Center(
                           child: Column(
@@ -864,7 +841,7 @@ class _OldProfileScreenState extends State<OldProfileScreen> {
                           ),
                         );
                       }
-                      
+
                       // Profile created, rebuild with new data
                       return const Center(
                         child: CircularProgressIndicator(color: AppTheme.primaryGreen),
@@ -881,325 +858,325 @@ class _OldProfileScreenState extends State<OldProfileScreen> {
                 return ListView(
                   padding: const EdgeInsets.all(20),
                   children: [
-                // 🎨 Enhanced profile header with smooth animation
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 600),
-                  curve: Curves.easeOutBack,
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    gradient: AppTheme.primaryGradient,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.primaryGreen.withOpacity(0.35),
-                        blurRadius: 24,
-                        offset: const Offset(0, 12),
-                      ),
-                      BoxShadow(
-                        color: AppTheme.primaryGreen.withOpacity(0.15),
-                        blurRadius: 40,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      // 🎨 Use animated avatar instead of plain CircleAvatar
-                      AnimatedUserAvatar(
-                        displayName: userModel.displayName,
-                        email: userModel.email,
-                        age: userModel.age,
-                        gender: userModel.gender,
-                        size: 80,
-                        showPulse: true, // Add pulse animation
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              // 📝 Show user name instead of email
-                              userModel.displayName.isNotEmpty 
-                                  ? userModel.displayName 
-                                  : (user.email?.split('@').first ?? 'User'),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 22,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            // ℹ️ Show age and gender info instead of email
-                            Text(
-                              '${userModel.age} years old • ${userModel.gender}',
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              userModel.bmi > 0 
-                                  ? 'BMI: ${userModel.bmi.toStringAsFixed(1)} (${userModel.bmiStatus})'
-                                  : 'Nutrition & Fitness Enthusiast',
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // Quick Stats
-                Row(
-                  children: [
-                    _StatTile(
-                      label: 'Weight',
-                      value: userModel.weight > 0 ? userModel.weight.toStringAsFixed(1) : '--',
-                      unit: userModel.units.contains('kg') ? 'kg' : 'lb',
-                      icon: Icons.monitor_weight,
-                      color: AppTheme.primaryGreen,
-                    ),
-                    const SizedBox(width: 12),
-                    _StatTile(
-                      label: 'Height',
-                      value: userModel.height > 0 ? userModel.height.toStringAsFixed(0) : '--',
-                      unit: userModel.units.contains('cm') ? 'cm' : 'in',
-                      icon: Icons.height,
-                      color: AppTheme.accentBlue,
-                    ),
-                    const SizedBox(width: 12),
-                    _StatTile(
-                      label: 'BMI',
-                      value: userModel.bmi > 0 ? userModel.bmi.toStringAsFixed(1) : '--',
-                      unit: '',
-                      icon: Icons.analytics,
-                      color: AppTheme.accentBlack,
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 24),
-
-                // 🎨 Enhanced daily goals with animation and dark mode support
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 700),
-                  curve: Curves.easeOutQuart,
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    // 🌙 Theme-aware background color
-                    color: Theme.of(context).brightness == Brightness.dark 
-                        ? AppTheme.surfaceDarkCard 
-                        : AppTheme.surfaceLight,
-                    borderRadius: BorderRadius.circular(20),
-                    // 🌙 Add border for dark mode
-                    border: Theme.of(context).brightness == Brightness.dark 
-                        ? Border.all(color: AppTheme.dividerDark, width: 0.5) 
-                        : null,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.black.withOpacity(0.4)
-                            : Colors.black.withOpacity(0.08),
-                        blurRadius: 16,
-                        offset: const Offset(0, 6),
-                      ),
-                      BoxShadow(
-                        color: AppTheme.primaryGreen.withOpacity(
-                          Theme.of(context).brightness == Brightness.dark ? 0.1 : 0.05,
-                        ),
-                        blurRadius: 32,
-                        offset: const Offset(0, 12),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.track_changes, color: AppTheme.primaryGreen),
-                          const SizedBox(width: 12),
-                          Text(
-                            'Daily Goals',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(fontWeight: FontWeight.w700),
+                    // 🎨 Enhanced profile header with smooth animation
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 600),
+                      curve: Curves.easeOutBack,
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        gradient: AppTheme.primaryGradient,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.primaryGreen.withOpacity(0.35),
+                            blurRadius: 24,
+                            offset: const Offset(0, 12),
+                          ),
+                          BoxShadow(
+                            color: AppTheme.primaryGreen.withOpacity(0.15),
+                            blurRadius: 40,
+                            offset: const Offset(0, 4),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
-                      // Real-time data indicators
-                      StreamBuilder(
-                        stream: FirebaseService.streamFoodLogData(user.uid, DateTime.now()),
-                        builder: (context, foodSnapshot) {
-                          final todayCalories = foodSnapshot.data?.totalCalories ?? 0.0;
-                          return NutrientIndicator(
-                            icon: Icons.local_fire_department,
-                            name: 'Calories',
-                            value: todayCalories,
-                            target: _dailyGoal.toDouble(),
-                            unit: 'kcal',
-                            color: AppTheme.primaryGreen,
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      StreamBuilder(
-                        stream: FirebaseService.streamHydrationData(user.uid, DateTime.now()),
-                        builder: (context, hydrationSnapshot) {
-                          final todayWater = hydrationSnapshot.data?.waterIntake ?? 0.0;
-                          final goal = hydrationSnapshot.data?.goalAmount ?? 2.5;
-                          return NutrientIndicator(
-                            icon: Icons.water_drop,
-                            name: 'Water',
-                            value: todayWater,
-                            target: goal,
-                            unit: 'L',
-                            color: AppTheme.accentBlue,
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      StreamBuilder(
-                        stream: FirebaseService.streamActivityData(user.uid, DateTime.now()),
-                        builder: (context, activitySnapshot) {
-                          final todaySteps = activitySnapshot.data?.steps.toDouble() ?? 0.0;
-                          return NutrientIndicator(
-                            icon: Icons.directions_run,
-                            name: 'Steps',
-                            value: todaySteps,
-                            target: 10000.0,
-                            unit: 'steps',
-                            color: AppTheme.accentBlack,
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // ✅ Edit Profile Button
-                Container(
-                  width: double.infinity,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    gradient: AppTheme.primaryGradient,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.primaryGreen.withOpacity(0.3),
-                        blurRadius: 12,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: ElevatedButton.icon(
-                    onPressed: () => _showEditProfileDialog(userModel),
-                    icon: const Icon(Icons.edit_outlined, color: Colors.white),
-                    label: const Text(
-                      'Edit Profile',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                      child: Row(
+                        children: [
+                          // 🎨 Use animated avatar instead of plain CircleAvatar
+                          AnimatedUserAvatar(
+                            displayName: userModel.displayName,
+                            email: userModel.email,
+                            age: userModel.age,
+                            gender: userModel.gender,
+                            size: 80,
+                            showPulse: true, // Add pulse animation
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  // 📝 Show user name instead of email
+                                  userModel.displayName.isNotEmpty
+                                      ? userModel.displayName
+                                      : (user.email?.split('@').first ?? 'User'),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                // ℹ️ Show age and gender info instead of email
+                                Text(
+                                  '${userModel.age} years old • ${userModel.gender}',
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  userModel.bmi > 0
+                                      ? 'BMI: ${userModel.bmi.toStringAsFixed(1)} (${userModel.bmiStatus})'
+                                      : 'Nutrition & Fitness Enthusiast',
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      shape: RoundedRectangleBorder(
+
+                    const SizedBox(height: 24),
+
+                    // Quick Stats
+                    Row(
+                      children: [
+                        _StatTile(
+                          label: 'Weight',
+                          value: userModel.weight > 0 ? userModel.weight.toStringAsFixed(1) : '--',
+                          unit: userModel.units.contains('kg') ? 'kg' : 'lb',
+                          icon: Icons.monitor_weight,
+                          color: AppTheme.primaryGreen,
+                        ),
+                        const SizedBox(width: 12),
+                        _StatTile(
+                          label: 'Height',
+                          value: userModel.height > 0 ? userModel.height.toStringAsFixed(0) : '--',
+                          unit: userModel.units.contains('cm') ? 'cm' : 'in',
+                          icon: Icons.height,
+                          color: AppTheme.accentBlue,
+                        ),
+                        const SizedBox(width: 12),
+                        _StatTile(
+                          label: 'BMI',
+                          value: userModel.bmi > 0 ? userModel.bmi.toStringAsFixed(1) : '--',
+                          unit: '',
+                          icon: Icons.analytics,
+                          color: AppTheme.accentBlack,
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // 🎨 Enhanced daily goals with animation and dark mode support
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 700),
+                      curve: Curves.easeOutQuart,
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        // 🌙 Theme-aware background color
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? AppTheme.surfaceDarkCard
+                            : AppTheme.surfaceLight,
+                        borderRadius: BorderRadius.circular(20),
+                        // 🌙 Add border for dark mode
+                        border: Theme.of(context).brightness == Brightness.dark
+                            ? Border.all(color: AppTheme.dividerDark, width: 0.5)
+                            : null,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.black.withOpacity(0.4)
+                                : Colors.black.withOpacity(0.08),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
+                          ),
+                          BoxShadow(
+                            color: AppTheme.primaryGreen.withOpacity(
+                              Theme.of(context).brightness == Brightness.dark ? 0.1 : 0.05,
+                            ),
+                            blurRadius: 32,
+                            offset: const Offset(0, 12),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.track_changes, color: AppTheme.primaryGreen),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Daily Goals',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleLarge
+                                    ?.copyWith(fontWeight: FontWeight.w700),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          // Real-time data indicators
+                          StreamBuilder(
+                            stream: FirebaseService.streamFoodLogData(user.uid, DateTime.now()),
+                            builder: (context, foodSnapshot) {
+                              final todayCalories = foodSnapshot.data?.totalCalories ?? 0.0;
+                              return NutrientIndicator(
+                                icon: Icons.local_fire_department,
+                                name: 'Calories',
+                                value: todayCalories,
+                                target: _dailyGoal.toDouble(),
+                                unit: 'kcal',
+                                color: AppTheme.primaryGreen,
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          StreamBuilder(
+                            stream: FirebaseService.streamHydrationData(user.uid, DateTime.now()),
+                            builder: (context, hydrationSnapshot) {
+                              final todayWater = hydrationSnapshot.data?.waterIntake ?? 0.0;
+                              final goal = hydrationSnapshot.data?.goalAmount ?? 2.5;
+                              return NutrientIndicator(
+                                icon: Icons.water_drop,
+                                name: 'Water',
+                                value: todayWater,
+                                target: goal,
+                                unit: 'L',
+                                color: AppTheme.accentBlue,
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          StreamBuilder(
+                            stream: FirebaseService.streamActivityData(user.uid, DateTime.now()),
+                            builder: (context, activitySnapshot) {
+                              final todaySteps = activitySnapshot.data?.steps.toDouble() ?? 0.0;
+                              return NutrientIndicator(
+                                icon: Icons.directions_run,
+                                name: 'Steps',
+                                value: todaySteps,
+                                target: 10000.0,
+                                unit: 'steps',
+                                color: AppTheme.accentBlack,
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // ✅ Edit Profile Button
+                    Container(
+                      width: double.infinity,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        gradient: AppTheme.primaryGradient,
                         borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.primaryGreen.withOpacity(0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: ElevatedButton.icon(
+                        onPressed: () => _showEditProfileDialog(userModel),
+                        icon: const Icon(Icons.edit_outlined, color: Colors.white),
+                        label: const Text(
+                          'Edit Profile',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ),
 
-                const SizedBox(height: 20),
+                    const SizedBox(height: 20),
 
-                // Settings
-                Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16)),
-                  child: Column(
-                    children: [
-                      ListTile(
-                        leading: const Icon(Icons.flag, color: AppTheme.primaryGreen),
-                        title: const Text('Daily Goal'),
-                        subtitle: Text('${userModel.calculatedDailyGoal} kcal'), // 🎯 Show calculated goal
-                        trailing: const Icon(Icons.edit),
-                        onTap: _showGoalDialog,
+                    // Settings
+                    Card(
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                      child: Column(
+                        children: [
+                          ListTile(
+                            leading: const Icon(Icons.flag, color: AppTheme.primaryGreen),
+                            title: const Text('Daily Goal'),
+                            subtitle: Text('${userModel.calculatedDailyGoal} kcal'), // 🎯 Show calculated goal
+                            trailing: const Icon(Icons.edit),
+                            onTap: _showGoalDialog,
+                          ),
+                          const Divider(height: 1),
+                          ListTile(
+                            leading: const Icon(Icons.straighten, color: AppTheme.accentBlue),
+                            title: const Text('Units'),
+                            subtitle: Text(_selectedUnit),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: _showUnitDialog,
+                          ),
+                          const Divider(height: 1),
+                          // 🎨 Theme settings - restored for dark/light mode switching
+                          ListTile(
+                            leading: const Icon(Icons.palette_outlined, color: AppTheme.primaryGreen),
+                            title: const Text('Theme'),
+                            subtitle: Text({
+                              ThemeMode.light: 'Light Mode',
+                              ThemeMode.dark: 'Dark Mode',
+                              ThemeMode.system: 'System Default',
+                            }[_currentThemeMode] ?? 'System Default'),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: _showThemeSettings,
+                          ),
+                          const Divider(height: 1),
+                          ListTile(
+                            leading: const Icon(Icons.notifications_outlined,
+                                color: AppTheme.accentBlack),
+                            title: const Text('Notifications'),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: _showNotificationSettings,
+                          ),
+                          const Divider(height: 1),
+                          ListTile(
+                            leading: const Icon(Icons.lock_outline,
+                                color: AppTheme.accentOrange),
+                            title: const Text('Privacy & Security'),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: _showPrivacySettings,
+                          ),
+                        ],
                       ),
-                      const Divider(height: 1),
-                      ListTile(
-                        leading: const Icon(Icons.straighten, color: AppTheme.accentBlue),
-                        title: const Text('Units'),
-                        subtitle: Text(_selectedUnit),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: _showUnitDialog,
-                      ),
-                      const Divider(height: 1),
-                      // 🎨 Theme settings - restored for dark/light mode switching
-                      ListTile(
-                        leading: const Icon(Icons.palette_outlined, color: AppTheme.primaryGreen),
-                        title: const Text('Theme'),
-                        subtitle: Text({
-                          ThemeMode.light: 'Light Mode',
-                          ThemeMode.dark: 'Dark Mode',
-                          ThemeMode.system: 'System Default',
-                        }[_currentThemeMode] ?? 'System Default'),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: _showThemeSettings,
-                      ),
-                      const Divider(height: 1),
-                      ListTile(
-                        leading: const Icon(Icons.notifications_outlined,
-                            color: AppTheme.accentBlack),
-                        title: const Text('Notifications'),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: _showNotificationSettings,
-                      ),
-                      const Divider(height: 1),
-                      ListTile(
-                        leading: const Icon(Icons.lock_outline,
-                            color: AppTheme.accentOrange),
-                        title: const Text('Privacy & Security'),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: _showPrivacySettings,
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // Logout
-                ElevatedButton.icon(
-                  onPressed: _showLogoutDialog,
-                  icon: const Icon(Icons.logout),
-                  label: const Text('Logout'),
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 50),
-                    backgroundColor: AppTheme.accentOrange,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
                     ),
-                  ),
-                ),
-              ],
+
+                    const SizedBox(height: 20),
+
+                    // Logout
+                    ElevatedButton.icon(
+                      onPressed: _showLogoutDialog,
+                      icon: const Icon(Icons.logout),
+                      label: const Text('Logout'),
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 50),
+                        backgroundColor: AppTheme.accentOrange,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    ),
+                  ],
                 );
               },
             ),
@@ -1229,7 +1206,7 @@ class _StatTile extends StatelessWidget {
   Widget build(BuildContext context) {
     // 🎨 Theme-aware colors for dark/light mode support
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -1239,7 +1216,7 @@ class _StatTile extends StatelessWidget {
           border: isDark ? Border.all(color: AppTheme.dividerDark, width: 0.5) : null,
           boxShadow: [
             BoxShadow(
-              color: isDark 
+              color: isDark
                   ? Colors.black.withOpacity(0.4)
                   : Colors.black.withOpacity(0.06),
               blurRadius: 14,
