@@ -596,7 +596,7 @@ class _ActivityScreenWithProviderState extends State<ActivityScreenWithProvider>
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: isError ? Colors.red.shade50 : Colors.green.shade50,
+            color: isError ? Colors.red.shade50 : AppTheme.primaryGreen.withOpacity(0.08),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: isError ? Colors.red.shade200 : Colors.green.shade200,
