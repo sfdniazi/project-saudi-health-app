@@ -330,7 +330,7 @@ class _HomeScreenWithProviderState extends State<HomeScreenWithProvider>
                       'of ${homeProvider.waterGoal.toStringAsFixed(1)}L',
                       homeProvider.waterProgress,
                       Icons.water_drop,
-                      Colors.blue,
+                      AppTheme.waterBlue,
                     ),
             ),
           ],
@@ -347,7 +347,7 @@ class _HomeScreenWithProviderState extends State<HomeScreenWithProvider>
                 'of ${homeProvider.calorieGoal.toInt()} kcal',
                 homeProvider.caloriesProgress,
                 Icons.local_fire_department,
-                Colors.orange,
+                AppTheme.stepsOrange,
               ),
       ],
     );
@@ -659,15 +659,15 @@ class _HomeScreenWithProviderState extends State<HomeScreenWithProvider>
     Color getTypeColor(RecommendationType type) {
       switch (type) {
         case RecommendationType.nutrition:
-          return Colors.orange;
+          return AppTheme.stepsOrange;
         case RecommendationType.hydration:
-          return Colors.blue;
+          return AppTheme.waterBlue;
         case RecommendationType.activity:
           return AppTheme.primaryGreen;
         case RecommendationType.weight:
-          return Colors.purple;
+          return AppTheme.secondaryGreen;
         case RecommendationType.sleep:
-          return Colors.indigo;
+          return AppTheme.waterBlue;
         default:
           return AppTheme.textSecondary;
       }
