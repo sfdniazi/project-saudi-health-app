@@ -655,8 +655,12 @@ class _HomeScreenWithProviderState extends State<HomeScreenWithProvider>
     );
   }
 
+/* <<<<<<<<<<<<<<  ✨ Windsurf Command 🌟 >>>>>>>>>>>>>>>> */
+  /// Builds a recommendation card based on the given [recommendation] and [homeProvider].
   Widget _buildRecommendationCard(RecommendationModel recommendation, HomeProvider homeProvider) {
+    /// Gets the color for the given [type].
     Color getTypeColor(RecommendationType type) {
+      // Switch on the type to get the corresponding color.
       switch (type) {
         case RecommendationType.nutrition:
           return AppTheme.stepsOrange;
@@ -669,11 +673,14 @@ class _HomeScreenWithProviderState extends State<HomeScreenWithProvider>
         case RecommendationType.sleep:
           return AppTheme.waterBlue;
         default:
+          // Default to text secondary color if type is not recognized.
           return AppTheme.textSecondary;
       }
     }
 
+    /// Gets the icon for the given [type].
     IconData getTypeIcon(RecommendationType type) {
+      // Switch on the type to get the corresponding icon.
       switch (type) {
         case RecommendationType.nutrition:
           return Icons.restaurant_menu;
@@ -686,13 +693,16 @@ class _HomeScreenWithProviderState extends State<HomeScreenWithProvider>
         case RecommendationType.sleep:
           return Icons.bedtime;
         default:
+          // Default to lightbulb icon if type is not recognized.
           return Icons.lightbulb;
       }
     }
 
+    // Get the color and icon for the recommendation type.
     final color = getTypeColor(recommendation.type);
     final icon = getTypeIcon(recommendation.type);
 
+    // Build the recommendation card.
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -709,6 +719,7 @@ class _HomeScreenWithProviderState extends State<HomeScreenWithProvider>
         children: [
           Row(
             children: [
+              // Build the icon container.
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
@@ -718,6 +729,7 @@ class _HomeScreenWithProviderState extends State<HomeScreenWithProvider>
                 child: Icon(icon, color: color, size: 16),
               ),
               const SizedBox(width: 12),
+              // Build the title text.
               Expanded(
                 child: Text(
                   recommendation.title,
@@ -728,6 +740,7 @@ class _HomeScreenWithProviderState extends State<HomeScreenWithProvider>
                   ),
                 ),
               ),
+              // If the recommendation has a high priority, add a badge.
               if (recommendation.priority == 1)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -747,6 +760,7 @@ class _HomeScreenWithProviderState extends State<HomeScreenWithProvider>
             ],
           ),
           const SizedBox(height: 8),
+          // Build the description text.
           Text(
             recommendation.description,
             style: TextStyle(
@@ -754,6 +768,7 @@ class _HomeScreenWithProviderState extends State<HomeScreenWithProvider>
               color: AppTheme.textSecondary,
             ),
           ),
+          // If the recommendation has an action text, add a button to mark it as read.
           if (recommendation.actionText != null) ...[
             const SizedBox(height: 12),
             Align(
@@ -774,6 +789,7 @@ class _HomeScreenWithProviderState extends State<HomeScreenWithProvider>
       ),
     );
   }
+/* <<<<<<<<<<  be2617f3-9607-42c6-a135-56ebb30b0657  >>>>>>>>>>> */
 
   Widget _buildTodaysMealsSection(HomeProvider homeProvider) {
     return Column(

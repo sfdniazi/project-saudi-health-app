@@ -73,7 +73,7 @@ class CommonErrorPatterns {
   
   /// ✅ CORRECT: Use safe conversion
   static void correctWay(List<Object?> result) {
-    PigeonUserDetails? user = safeToPigeonUserDetails(result); // ✅ This works!
+    safeToPigeonUserDetails(result); // ✅ This works!
   }
   
   /// ❌ WRONG: Direct casting
@@ -83,6 +83,6 @@ class CommonErrorPatterns {
   
   /// ✅ CORRECT: Safe casting with type checking
   static void correctCasting(dynamic result) {
-    PigeonUserDetails? user = safeToPigeonUserDetails(result); // ✅ Safe!
+    safeToPigeonUserDetails(result); // ✅ Safe!
   }
 }

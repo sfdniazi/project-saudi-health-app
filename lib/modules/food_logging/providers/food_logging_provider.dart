@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../../services/firebase_service.dart';
-import '../../../services/mlkit_service.dart';
 import '../../../models/food_model.dart';
 import '../../../models/user_model.dart';
 import '../models/food_logging_state_model.dart';

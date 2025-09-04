@@ -43,25 +43,10 @@ class NabdAlHayahApp extends StatefulWidget {
 }
 
 class _NabdAlHayahAppState extends State<NabdAlHayahApp> {
-  ThemeMode _themeMode = ThemeMode.system;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadThemeMode();
-  }
-
-  Future<void> _loadThemeMode() async {
-    final savedThemeMode = await AppTheme.getSavedThemeMode();
-    setState(() {
-      _themeMode = savedThemeMode;
-    });
-  }
 
   void updateThemeMode(ThemeMode themeMode) {
-    setState(() {
-      _themeMode = themeMode;
-    });
+    // Keep this method for compatibility with ThemeModeProvider
+    // but since we're using light theme only, just save the preference
     AppTheme.saveThemeMode(themeMode);
   }
 

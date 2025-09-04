@@ -943,7 +943,6 @@ class _BarcodeBottomSheetState extends State<_BarcodeBottomSheet>
   bool _isInitialized = false;
   bool _isScanning = false;
   bool _isProcessing = false;
-  String? _errorMessage;
   CameraController? _cameraController;
   Map<String, dynamic>? _lastScanResult;
 
@@ -967,13 +966,11 @@ class _BarcodeBottomSheetState extends State<_BarcodeBottomSheet>
       if (mounted) {
         setState(() {
           _isInitialized = true;
-          _errorMessage = null;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Failed to initialize scanner: $e';
           _isInitialized = false;
         });
       }
@@ -986,7 +983,6 @@ class _BarcodeBottomSheetState extends State<_BarcodeBottomSheet>
     try {
       setState(() {
         _isScanning = true;
-        _errorMessage = null;
         _lastScanResult = null;
       });
 
@@ -1001,7 +997,6 @@ class _BarcodeBottomSheetState extends State<_BarcodeBottomSheet>
       if (mounted) {
         setState(() {
           _isScanning = false;
-          _errorMessage = 'Failed to start scanning: $e';
         });
       }
     }
@@ -1046,7 +1041,7 @@ class _BarcodeBottomSheetState extends State<_BarcodeBottomSheet>
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Failed to process scan: $e';
+          // Error handled silently
         });
       }
     }

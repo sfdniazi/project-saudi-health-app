@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:camera/camera.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../core/app_theme.dart';
-import '../../../services/firebase_service.dart';
-import '../../../services/mlkit_service.dart';
 import '../../../models/food_model.dart';
 import '../providers/food_logging_provider.dart';
 import '../models/food_logging_state_model.dart';
@@ -670,7 +667,6 @@ class _FoodLoggingScreenContentState extends State<_FoodLoggingScreenContent>
   Widget _buildScanHistoryItem(Map<String, dynamic> scanData) {
     final mealInfo = scanData['mealInfo'] as Map<String, dynamic>;
     final timestamp = scanData['timestamp'] as Timestamp?;
-    final barcode = scanData['barcode'] as String;
     
     final timeString = timestamp != null
         ? DateFormat('MMM d, HH:mm').format(timestamp.toDate())
@@ -914,7 +910,6 @@ class _BarcodeBottomSheet extends StatefulWidget {
 }
 
 class _BarcodeBottomSheetState extends State<_BarcodeBottomSheet> {
-  bool _isScanning = false;
 
   @override
   Widget build(BuildContext context) {

@@ -28,7 +28,9 @@ class AppTheme {
   static const Color textLightDark = Color(0xFFA1A1AA); // Muted for tertiary text
   static const Color accentDarkGreen = Color(0xFF00D4AA); // Brighter green for dark mode
   static const Color dividerDark = Color(0xFF3A3A3C); // Subtle dividers
-  
+  static const Color waterBlue = Color(0xFF2D9CDB);
+  static const Color stepsOrange = Color(0xFFF2994A);
+
   // Gradient colors
   static const LinearGradient primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
