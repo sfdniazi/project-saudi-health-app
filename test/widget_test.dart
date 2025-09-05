@@ -7,12 +7,12 @@
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:nabd_al_hayah/main.dart';
+import '../lib/main.dart';
 
 void main() {
       testWidgets('Counter increments smoke test', (WidgetTester tester) async {
       // Build our app and trigger a frame.
-      await tester.pumpWidget(const NabdAlHayahApp());
+await tester.pumpWidget(const NabdAlHayahApp());
 
     // Verify that our app loads correctly
     expect(find.text('Nabd Al-Hayah'), findsOneWidget);

@@ -45,6 +45,10 @@ dependencies:
   flutter_launcher_icons: ^0.14.4
   shimmer: ^3.0.0
   local_auth: ^2.1.6
+  
+  # ✅ Google Gemini AI
+  google_generative_ai: ^0.4.3
+  flutter_dotenv: ^5.1.0
 
 dev_dependencies:
   flutter_test:
@@ -58,6 +62,7 @@ flutter:
 
   assets:
     - assets/images/
+    - .env
 
 # ✅ Flutter Launcher Icons Configuration
 flutter_launcher_icons:

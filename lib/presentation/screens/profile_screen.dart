@@ -6,7 +6,6 @@ import '../widgets/nutrient_indicator.dart';
 import '../widgets/animated_user_avatar.dart'; // 🎨 Animated avatar
 import '../../services/firebase_service.dart';
 import '../../models/user_model.dart';
-import '../../main.dart'; // 🎨 For ThemeModeProvider
 
 class OldProfileScreen extends StatefulWidget {
   const OldProfileScreen({super.key});
@@ -287,8 +286,7 @@ class _OldProfileScreenState extends State<OldProfileScreen> {
                 onChanged: (value) {
                   if (value != null) {
                     // 🎨 Update theme instantly across entire app
-                    final provider = ThemeModeProvider.of(context);
-                    provider?.updateThemeMode(value);
+                    AppTheme.saveThemeMode(value);
                     setState(() {
                       _currentThemeMode = value;
                     });
@@ -313,8 +311,7 @@ class _OldProfileScreenState extends State<OldProfileScreen> {
                 onChanged: (value) {
                   if (value != null) {
                     // 🎨 Update theme instantly across entire app
-                    final provider = ThemeModeProvider.of(context);
-                    provider?.updateThemeMode(value);
+                    AppTheme.saveThemeMode(value);
                     setState(() {
                       _currentThemeMode = value;
                     });
@@ -339,8 +336,7 @@ class _OldProfileScreenState extends State<OldProfileScreen> {
                 onChanged: (value) {
                   if (value != null) {
                     // 🎨 Update theme instantly across entire app
-                    final provider = ThemeModeProvider.of(context);
-                    provider?.updateThemeMode(value);
+                    AppTheme.saveThemeMode(value);
                     setState(() {
                       _currentThemeMode = value;
                     });

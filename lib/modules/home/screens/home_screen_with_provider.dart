@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:percent_indicator/linear_percent_indicator.dart';
+import 'package:percent_indicator/circular_percent_indicator.dart';
 import 'package:intl/intl.dart';
 
 import '../../food_logging/screens/food_logging_screen_with_provider.dart';
@@ -15,6 +16,7 @@ import '../../../models/food_model.dart';
 
 // Import screens for navigation
 import '../../activity/screens/activity_screen_with_provider.dart';
+import '../../ai_recommendations/screens/ai_recommendations_screen_with_provider.dart';
 
 class HomeScreenWithProvider extends StatefulWidget {
   const HomeScreenWithProvider({super.key});
@@ -27,6 +29,7 @@ class _HomeScreenWithProviderState extends State<HomeScreenWithProvider>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+  DateTime _calendarFocusDate = DateTime.now();
 
   @override
   void initState() {
@@ -158,23 +161,8 @@ class _HomeScreenWithProviderState extends State<HomeScreenWithProvider>
               opacity: _fadeAnimation,
               child: Column(
                 children: [
-                  // Custom app bar
-                  CustomAppBar(
-                    title: 'Nabd Al-Hayah',
-                    actions: [
-                      IconButton(
-                        icon: Icon(
-                          homeProvider.notificationsEnabled
-                              ? Icons.notifications_active
-                              : Icons.notifications_outlined,
-                          color: homeProvider.notificationsEnabled
-                              ? AppTheme.primaryGreen
-                              : Colors.white,
-                        ),
-                        onPressed: () => _showNotificationSettings(homeProvider),
-                      ),
-                    ],
-                  ),
+                  // Header row (avatar, greeting, actions) - replaces gradient app bar
+                  SafeArea(bottom: false, child: _buildGreetingHeaderRow(homeProvider)),
 
                   // Main content
                   Expanded(
@@ -183,24 +171,26 @@ class _HomeScreenWithProviderState extends State<HomeScreenWithProvider>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Welcome Card
-                          _buildWelcomeSection(homeProvider),
+                          // Weekly Progress Highlight
+                          _buildWeeklyProgressCard(homeProvider),
+                          const SizedBox(height: 16),
+
+                          // Steps and Water tiles
+                          _buildTwoStatTiles(homeProvider),
+                          const SizedBox(height: 16),
+
+                          // Calendar strip
+                          _buildCalendarStrip(),
+                          const SizedBox(height: 16),
+
+                          // Meals short list
+                          _buildMealsShortList(homeProvider),
                           const SizedBox(height: 20),
 
-                          // Today's Overview Cards
-                          _buildTodayOverviewSection(homeProvider),
-                          const SizedBox(height: 20),
-
-                          // Quick Actions
+                          // Keep Quick Actions and AI sections for feature parity
                           _buildQuickActionsSection(homeProvider),
                           const SizedBox(height: 20),
-
-                          // AI Recommendations
                           _buildAIRecommendationsSection(homeProvider),
-                          const SizedBox(height: 20),
-
-                          // Today's Meals
-                          _buildTodaysMealsSection(homeProvider),
                         ],
                       ),
                     ),
@@ -285,6 +275,307 @@ class _HomeScreenWithProviderState extends State<HomeScreenWithProvider>
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildGreetingHeaderRow(HomeProvider homeProvider) {
+    final displayName = (homeProvider.userProfile?.displayName ?? 'User').trim();
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+      child: Row(
+        children: [
+          // Avatar
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppTheme.cardBg,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.person, color: AppTheme.textLight),
+          ),
+          const SizedBox(width: 12),
+          // Greeting and name
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Good morning!',
+                  style: const TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Text(
+                  displayName,
+                  style: const TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          // Calendar button
+          _buildRoundIconButton(Icons.calendar_month, onTap: () {
+            setState(() => _calendarFocusDate = DateTime.now());
+          }),
+          const SizedBox(width: 8),
+          // Notification button
+          _buildRoundIconButton(
+            homeProvider.notificationsEnabled
+                ? Icons.notifications_active
+                : Icons.notifications_none,
+            onTap: () => _showNotificationSettings(homeProvider),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRoundIconButton(IconData icon, {VoidCallback? onTap}) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(22),
+        child: Ink(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceLight,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+            ],
+          ),
+          child: Icon(icon, color: AppTheme.textPrimary, size: 20),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWeeklyProgressCard(HomeProvider homeProvider) {
+    final avgProgress = ((homeProvider.stepsProgress + homeProvider.waterProgress + homeProvider.caloriesProgress) / 3.0)
+        .clamp(0.0, 1.0);
+    final days = (avgProgress * 7).round().clamp(0, 7);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.highlightBg,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                // Small label
+                Row(
+                  children: [
+                    Icon(Icons.bolt_outlined, size: 16, color: AppTheme.textSecondary),
+                    SizedBox(width: 6),
+                    Text('Daily intake', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Your Weekly\nProgress',
+                  style: TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    height: 1.1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(
+            width: 110,
+            height: 110,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Container(
+                  width: 96,
+                  height: 96,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white,
+                  ),
+                ),
+                CircularPercentIndicator(
+                  radius: 48,
+                  lineWidth: 10,
+                  percent: avgProgress,
+                  circularStrokeCap: CircularStrokeCap.round,
+                  backgroundColor: Colors.white.withOpacity(0.7),
+                  progressColor: AppTheme.primaryGreen,
+                  center: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text('$days', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                      const Text('days', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTwoStatTiles(HomeProvider homeProvider) {
+    return Row(
+      children: [
+        Expanded(
+          child: homeProvider.isSectionLoading(HomeSection.activityData)
+              ? HomeShimmerWidgets.overviewCardShimmer()
+              : _buildOverviewCard(
+                  'Step to\nwalk',
+                  '${homeProvider.currentSteps}',
+                  'steps',
+                  homeProvider.stepsProgress,
+                  Icons.directions_walk,
+                  AppTheme.primaryGreen,
+                ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: homeProvider.isSectionLoading(HomeSection.hydrationData)
+              ? HomeShimmerWidgets.overviewCardShimmer()
+              : _buildOverviewCard(
+                  'Drink\nWater',
+                  '${homeProvider.currentWaterIntake.toStringAsFixed(0)}',
+                  'glass',
+                  homeProvider.waterProgress,
+                  Icons.water_drop,
+                  AppTheme.waterBlue,
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCalendarStrip() {
+    String monthLabel(DateTime d) => DateFormat('MMMM yyyy').format(d);
+    final now = DateTime.now();
+    final int weekday = _calendarFocusDate.weekday % 7; // Sunday=0
+    final start = _calendarFocusDate.subtract(Duration(days: weekday));
+    final days = List.generate(7, (i) => start.add(Duration(days: i)));
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceLight,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.textLight.withOpacity(0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(monthLabel(_calendarFocusDate), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+              const Spacer(),
+              _buildRoundIconButton(Icons.chevron_left, onTap: () => setState(() => _calendarFocusDate = _calendarFocusDate.subtract(const Duration(days: 7)))),
+              const SizedBox(width: 8),
+              _buildRoundIconButton(Icons.chevron_right, onTap: () => setState(() => _calendarFocusDate = _calendarFocusDate.add(const Duration(days: 7)))),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: days.map((d) {
+              final isToday = d.year == now.year && d.month == now.month && d.day == now.day;
+              final label = DateFormat('E').format(d).substring(0, 1); // first letter
+              return Column(
+                children: [
+                  Text(label, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isToday ? AppTheme.primaryGreen.withOpacity(0.3) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${d.day.toString().padLeft(2, '0')}',
+                      style: TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMealsShortList(HomeProvider homeProvider) {
+    Widget mealRow(String title, int kcal, {VoidCallback? onAdd}) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppTheme.surfaceLight,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppTheme.textLight.withOpacity(0.1)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppTheme.stepsOrange.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.local_fire_department, color: AppTheme.stepsOrange, size: 18),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                  const SizedBox(height: 4),
+                  Text('$kcal kcal', style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                ],
+              ),
+            ),
+            _buildRoundIconButton(Icons.add, onTap: onAdd),
+          ],
+        ),
+      );
+    }
+
+    int caloriesFor(String mealType) {
+      final meals = homeProvider.foodLogData?.meals ?? [];
+      final found = meals.where((m) => m.mealType.toLowerCase() == mealType).toList();
+      if (found.isEmpty) return 0;
+      return found.first.totalCalories.toInt();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        mealRow('Breakfast', caloriesFor('breakfast'), onAdd: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FoodLoggingScreenWithProvider()))),
+        mealRow('Lunch time', caloriesFor('lunch'), onAdd: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FoodLoggingScreenWithProvider()))),
+      ],
     );
   }
 
@@ -530,7 +821,7 @@ class _HomeScreenWithProviderState extends State<HomeScreenWithProvider>
                     child: _buildActionButton(
                       'Log Food',
                       Icons.restaurant_menu,
-                      Colors.orange,
+                      AppTheme.stepsOrange,
                       () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FoodLoggingScreenWithProvider())),
                     ),
                   ),
@@ -624,43 +915,75 @@ class _HomeScreenWithProviderState extends State<HomeScreenWithProvider>
   }
 
   Widget _buildEmptyRecommendations() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceLight,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppTheme.textLight.withOpacity(0.1),
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.lightbulb_outline,
-            color: AppTheme.textLight,
-            size: 24,
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const AIRecommendationsScreenWithProvider(),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Start logging your activities to get personalized recommendations!',
-              style: TextStyle(
-                fontSize: 14,
-                color: AppTheme.textSecondary,
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppTheme.surfaceLight,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppTheme.primaryGreen.withOpacity(0.3),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryGreen.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.psychology,
+                color: AppTheme.primaryGreen,
+                size: 24,
               ),
             ),
-          ),
-        ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Get AI-Powered Recommendations',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Tap here for personalized food and exercise suggestions',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios,
+              color: AppTheme.primaryGreen,
+              size: 16,
+            ),
+          ],
+        ),
       ),
     );
   }
 
-/* <<<<<<<<<<<<<<  ✨ Windsurf Command 🌟 >>>>>>>>>>>>>>>> */
-  /// Builds a recommendation card based on the given [recommendation] and [homeProvider].
   Widget _buildRecommendationCard(RecommendationModel recommendation, HomeProvider homeProvider) {
-    /// Gets the color for the given [type].
     Color getTypeColor(RecommendationType type) {
-      // Switch on the type to get the corresponding color.
       switch (type) {
         case RecommendationType.nutrition:
           return AppTheme.stepsOrange;
@@ -673,14 +996,11 @@ class _HomeScreenWithProviderState extends State<HomeScreenWithProvider>
         case RecommendationType.sleep:
           return AppTheme.waterBlue;
         default:
-          // Default to text secondary color if type is not recognized.
           return AppTheme.textSecondary;
       }
     }
 
-    /// Gets the icon for the given [type].
     IconData getTypeIcon(RecommendationType type) {
-      // Switch on the type to get the corresponding icon.
       switch (type) {
         case RecommendationType.nutrition:
           return Icons.restaurant_menu;
@@ -693,16 +1013,13 @@ class _HomeScreenWithProviderState extends State<HomeScreenWithProvider>
         case RecommendationType.sleep:
           return Icons.bedtime;
         default:
-          // Default to lightbulb icon if type is not recognized.
           return Icons.lightbulb;
       }
     }
 
-    // Get the color and icon for the recommendation type.
     final color = getTypeColor(recommendation.type);
     final icon = getTypeIcon(recommendation.type);
 
-    // Build the recommendation card.
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -719,7 +1036,6 @@ class _HomeScreenWithProviderState extends State<HomeScreenWithProvider>
         children: [
           Row(
             children: [
-              // Build the icon container.
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
@@ -729,7 +1045,6 @@ class _HomeScreenWithProviderState extends State<HomeScreenWithProvider>
                 child: Icon(icon, color: color, size: 16),
               ),
               const SizedBox(width: 12),
-              // Build the title text.
               Expanded(
                 child: Text(
                   recommendation.title,
@@ -740,7 +1055,6 @@ class _HomeScreenWithProviderState extends State<HomeScreenWithProvider>
                   ),
                 ),
               ),
-              // If the recommendation has a high priority, add a badge.
               if (recommendation.priority == 1)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -760,7 +1074,6 @@ class _HomeScreenWithProviderState extends State<HomeScreenWithProvider>
             ],
           ),
           const SizedBox(height: 8),
-          // Build the description text.
           Text(
             recommendation.description,
             style: TextStyle(
@@ -768,7 +1081,6 @@ class _HomeScreenWithProviderState extends State<HomeScreenWithProvider>
               color: AppTheme.textSecondary,
             ),
           ),
-          // If the recommendation has an action text, add a button to mark it as read.
           if (recommendation.actionText != null) ...[
             const SizedBox(height: 12),
             Align(
@@ -789,7 +1101,6 @@ class _HomeScreenWithProviderState extends State<HomeScreenWithProvider>
       ),
     );
   }
-/* <<<<<<<<<<  be2617f3-9607-42c6-a135-56ebb30b0657  >>>>>>>>>>> */
 
   Widget _buildTodaysMealsSection(HomeProvider homeProvider) {
     return Column(
@@ -864,13 +1175,13 @@ class _HomeScreenWithProviderState extends State<HomeScreenWithProvider>
     Icon getMealIcon(String mealType) {
       switch (mealType.toLowerCase()) {
         case 'breakfast':
-          return Icon(Icons.free_breakfast, color: Colors.orange, size: 24);
+          return Icon(Icons.free_breakfast, color: AppTheme.stepsOrange, size: 24);
         case 'lunch':
           return Icon(Icons.lunch_dining, color: Colors.green, size: 24);
         case 'dinner':
           return Icon(Icons.dinner_dining, color: Colors.red, size: 24);
         case 'snack':
-          return Icon(Icons.bakery_dining, color: Colors.purple, size: 24);
+          return Icon(Icons.bakery_dining, color: AppTheme.secondaryGreen, size: 24);
         default:
           return Icon(Icons.restaurant_menu, color: AppTheme.primaryGreen, size: 24);
       }
