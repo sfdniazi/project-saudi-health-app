@@ -3,7 +3,6 @@ enum DashboardPage {
   foodLogging,
   statistics,
   profile,
-  activity,
 }
 
 enum NavigationStatus {
@@ -79,8 +78,6 @@ class DashboardStateModel {
         return 'Statistics';
       case DashboardPage.profile:
         return 'Profile';
-      case DashboardPage.activity:
-        return 'Activity';
     }
   }
 
@@ -89,15 +86,12 @@ class DashboardStateModel {
     switch (currentPage) {
       case DashboardPage.home:
         return 'home';
-
       case DashboardPage.foodLogging:
         return 'restaurant';
       case DashboardPage.statistics:
         return 'analytics';
       case DashboardPage.profile:
         return 'person';
-      case DashboardPage.activity:
-        return 'fitness_center';
     }
   }
 

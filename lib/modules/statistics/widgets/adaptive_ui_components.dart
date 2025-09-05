@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/app_theme.dart';
 import '../utils/responsive_layout_utils.dart';
-import '../models/statistics_state_model.dart';
 
 /// Collapsible section widget with responsive behavior
 class CollapsibleSection extends StatelessWidget {

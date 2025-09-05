@@ -9,7 +9,6 @@ import '../models/dashboard_state_model.dart';
 import '../../home/screens/home_screen_with_provider.dart';
 import '../../statistics/screens/statistics_screen.dart';
 import '../../profile/screens/profile_screen_with_provider.dart';
-import '../../activity/screens/activity_screen_with_provider.dart';
 
 import '../../../core/app_theme.dart';
 
@@ -61,15 +60,12 @@ class _DashboardNavigationScreenState extends State<DashboardNavigationScreen>
     switch (page) {
       case DashboardPage.home:
         return const HomeScreenWithProvider();
-
       case DashboardPage.foodLogging:
         return const FoodLoggingScreenWithProvider();
       case DashboardPage.statistics:
         return const StatisticsScreen();
       case DashboardPage.profile:
         return const ProfileScreenWithProvider();
-      case DashboardPage.activity:
-        return const ActivityScreenWithProvider();
     }
   }
 

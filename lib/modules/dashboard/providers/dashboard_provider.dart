@@ -96,7 +96,6 @@ class DashboardProvider with ChangeNotifier {
   }
 
 
-
   /// Navigate to food logging page
   void navigateToFoodLogging() {
     navigateToPage(DashboardPage.foodLogging);
@@ -112,10 +111,6 @@ class DashboardProvider with ChangeNotifier {
     navigateToPage(DashboardPage.profile);
   }
 
-  /// Navigate to activity page
-  void navigateToActivity() {
-    navigateToPage(DashboardPage.activity);
-  }
 
   /// Navigate back in history
   bool navigateBack() {
@@ -166,15 +161,12 @@ class DashboardProvider with ChangeNotifier {
     switch (page) {
       case DashboardPage.home:
         return 0;
-
       case DashboardPage.foodLogging:
         return 1;
       case DashboardPage.statistics:
         return 2;
       case DashboardPage.profile:
         return 3;
-      case DashboardPage.activity:
-        return 4;
     }
   }
 
@@ -187,7 +179,6 @@ class DashboardProvider with ChangeNotifier {
       case DashboardPage.foodLogging:
       case DashboardPage.statistics:
       case DashboardPage.profile:
-      case DashboardPage.activity:
         return true;
     }
   }
@@ -241,7 +232,7 @@ class DashboardProvider with ChangeNotifier {
     return _dashboardState.currentPage == page;
   }
 
-  /// Get navigation items for bottom navigation
+  /// Get navigation items for bottom navigation (Original 4-tab layout)
   List<NavigationItem> get navigationItems {
     return [
       NavigationItem(
@@ -250,7 +241,6 @@ class DashboardProvider with ChangeNotifier {
         activeIcon: Icons.home,
         label: 'Home',
       ),
-
       NavigationItem(
         page: DashboardPage.foodLogging,
         icon: Icons.restaurant_outlined,
