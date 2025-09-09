@@ -57,11 +57,11 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     _fadeController.forward();
     
     Timer(const Duration(milliseconds: 300), () {
-      _scaleController.forward();
+      if (mounted) _scaleController.forward();
     });
     
     Timer(const Duration(milliseconds: 500), () {
-      _slideController.forward();
+      if (mounted) _slideController.forward();
     });
 
     // Navigate to main navigation wrapper after animations

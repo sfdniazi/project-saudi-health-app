@@ -239,15 +239,22 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                   bottom: mediaQuery.viewInsets.bottom,
                 ),
                 physics: const ClampingScrollPhysics(),
-                child: Column(
-                  children: [
-                    // Header - Adaptive height
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      height: isKeyboardVisible 
-                          ? 80 // Much smaller height when keyboard is visible
-                          : 280, // Full height when keyboard is hidden
-                          child: FadeTransition(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: mediaQuery.size.height - 
+                        mediaQuery.padding.top - 
+                        mediaQuery.padding.bottom,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Header - Adaptive height
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        height: isKeyboardVisible 
+                            ? 80 // Much smaller height when keyboard is visible
+                            : 280, // Full height when keyboard is hidden
+                        child: FadeTransition(
                             opacity: _fadeAnimation,
                             child: Padding(
                               padding: EdgeInsets.symmetric(
@@ -306,8 +313,12 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                           ),
                         ),
 
-                        // Form section - Expanded to fill remaining space
-                        Expanded(
+                        // Form section - Container with proper sizing (Fixed)
+                        Container(
+                          constraints: BoxConstraints(
+                            minHeight: 400,
+                            maxHeight: mediaQuery.size.height * 0.8,
+                          ),
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: AnimatedContainer(
@@ -431,7 +442,8 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                             ),
                           ),
                         ),
-                    ],
+                      ],
+                    ),
                   ),
               ),
             ),
