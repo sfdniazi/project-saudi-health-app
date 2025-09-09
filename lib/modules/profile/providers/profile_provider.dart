@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:provider/provider.dart';
 
 import '../models/profile_state_model.dart';
 import '../../../models/user_model.dart';
 import '../../../services/firebase_service.dart';
 import '../../../services/global_step_counter_provider.dart';
 import '../../../core/app_theme.dart';
+import '../../auth/providers/auth_provider.dart' as auth_provider;
 
 class ProfileProvider with ChangeNotifier {
   // Private fields
@@ -369,42 +371,31 @@ class ProfileProvider with ChangeNotifier {
     }
   }
 
-  /// ✅ Logout functionality with proper navigation
+  /// ✅ Logout functionality using centralized AuthProvider
   Future<void> logout(BuildContext context) async {
     try {
       _setProfileState(ProfileStateModel.loggingOut());
-
-      // Sign out from Firebase Auth directly
-      await _auth.signOut();
-
+      
+      // Use centralized AuthProvider signOut method
+      final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
+      await authProvider.signOut();
+      
       // Clear local profile state
       _userModel = null;
       _setProfileState(ProfileStateModel.initial());
-
-      // Navigate to login screen
-      if (context.mounted) {
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/login',
-          (route) => false, // Remove all previous routes
-        );
-      }
+      
+      // RootScreen will automatically navigate to StartPage when auth state changes
+      // No manual navigation needed here
+      
     } catch (e) {
-      // Even if there's an error, proceed with navigation
+      // Even if there's an error, proceed with clearing local state
       debugPrint('Logout error (non-critical): $e');
       
       // Clear local state anyway
       _userModel = null;
       _setProfileState(ProfileStateModel.initial());
       
-      // Navigate to login screen
-      if (context.mounted) {
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/login',
-          (route) => false,
-        );
-      }
+      // RootScreen will handle navigation when auth state becomes null
     }
   }
 

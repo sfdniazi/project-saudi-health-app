@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/app_theme.dart';
-import '../../../presentation/navigation/main_navigation.dart';
 import '../providers/auth_provider.dart';
 import 'login_screen.dart';
 
@@ -73,7 +72,7 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
   }
 
   void _listenToAuthChanges(AuthProvider authProvider) {
-    // Navigate to main screen when authenticated
+    // Success: Show welcome dialog, RootScreen will handle navigation
     if (authProvider.isAuthenticated) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -277,9 +276,7 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
           ElevatedButton(
             onPressed: () {
               Navigator.of(context).pop();
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const MainNavigation()),
-              );
+              // RootScreen will automatically navigate when auth state changes
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryGreen,
@@ -505,8 +502,20 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
               if (value == null || value.isEmpty) {
                 return 'Please enter a password';
               }
-              if (value.length < 6) {
-                return 'Password must be at least 6 characters';
+              if (value.length < 8) {
+                return 'Password must be at least 8 characters';
+              }
+              // Check for at least one uppercase letter
+              if (!RegExp(r'[A-Z]').hasMatch(value)) {
+                return 'Password must contain at least one uppercase letter';
+              }
+              // Check for at least one number
+              if (!RegExp(r'\d').hasMatch(value)) {
+                return 'Password must contain at least one number';
+              }
+              // Check for at least one special character
+              if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(value)) {
+                return 'Password must contain at least one special character';
               }
               return null;
             },
