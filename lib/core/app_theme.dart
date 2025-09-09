@@ -5,18 +5,28 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// ✅ Enhanced Material 3 theme with dark mode support
 class AppTheme {
   // Brand colors for both light and dark themes
-  static const Color primaryGreen = Color(0xFF00C896);
-  static const Color secondaryGreen = Color(0xFF00E6A3);
-  static const Color accentBlue = Color(0xFF4A90E2);
+  // Green theme tokens per spec
+  static const Color primaryGreen = Color(0xFFA9E563); // PRIMARY_GREEN
+  static const Color secondaryGreen = Color(0xFF6FCF97); // SECONDARY_GREEN
+  static const Color waterBlue = Color(0xFF2D9CDB); // WATER_BLUE
+  static const Color stepsOrange = Color(0xFFF2994A); // STEPS_ORANGE
+  // Backward-compatible aliases for existing code references
+  static const Color accentBlue = waterBlue; // alias for previous accentBlue
+  static const Color accentOrange = stepsOrange; // alias for previous accentOrange
   static const Color accentBlack = Color(0xFF1A1A1A);
-  static const Color accentOrange = Color(0xFFFF6B6B);
   
   // Light theme colors
-  static const Color background = Color(0xFFF8FAFC);
-  static const Color surfaceLight = Color(0xFFFFFFFF);
-  static const Color textPrimary = Color(0xFF1A1A1A);
-  static const Color textSecondary = Color(0xFF6B7280);
-  static const Color textLight = Color(0xFF9CA3AF);
+  static const Color background = Color(0xFFFFFFFF); // MAIN_BACKGROUND kept
+  static const Color surfaceLight = Color(0xFFF8F9FA); // CARD_BG
+  static const Color cardBg = Color(0xFFF8F9FA); // alias
+  static const Color highlightBg = Color(0xFFE9F8E1); // HIGHLIGHT_BG
+  static const Color textPrimary = Color(0xFF1E1E1E); // PRIMARY_TEXT
+  static const Color textSecondary = Color(0xFF6C6C6C); // SECONDARY_TEXT
+  static const Color textLight = Color(0xFF828282);
+  static const Color borderColor = Color(0xFFE0E0E0);
+  static const Color backgroundGrey = Color(0xFFF5F5F5);
+  static const Color backgroundLight = Color(0xFFFFFFFF);
+  static const Color errorColor = Color(0xFFE57373);
   
   // Enhanced Dark theme colors for premium luxury feel
   static const Color backgroundDark = Color(0xFF0A0A0A); // Deeper black for premium feel
@@ -28,7 +38,7 @@ class AppTheme {
   static const Color textLightDark = Color(0xFFA1A1AA); // Muted for tertiary text
   static const Color accentDarkGreen = Color(0xFF00D4AA); // Brighter green for dark mode
   static const Color dividerDark = Color(0xFF3A3A3C); // Subtle dividers
-  
+
   // Gradient colors
   static const LinearGradient primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
@@ -39,7 +49,7 @@ class AppTheme {
   static const LinearGradient headerGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+    colors: [primaryGreen, secondaryGreen],
   );
   
   static const LinearGradient headerGradientDark = LinearGradient(
@@ -52,17 +62,18 @@ class AppTheme {
   static ThemeData lightTheme = ThemeData(
     useMaterial3: true,
     brightness: Brightness.light,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: primaryGreen,
+    colorScheme: ColorScheme(
       brightness: Brightness.light,
-    ).copyWith(
       primary: primaryGreen,
+      onPrimary: Colors.white,
       secondary: secondaryGreen,
-      tertiary: accentBlue,
-      surface: surfaceLight,
-      onSurface: textPrimary,
+      onSecondary: Colors.white,
+      error: stepsOrange,
+      onError: Colors.white,
       background: background,
       onBackground: textPrimary,
+      surface: surfaceLight,
+      onSurface: textPrimary,
     ),
     scaffoldBackgroundColor: background,
     
@@ -163,9 +174,24 @@ class AppTheme {
       iconTheme: const IconThemeData(color: Colors.white),
       titleTextStyle: GoogleFonts.inter(
         fontSize: 22,
-        fontWeight: FontWeight.w400,
+        fontWeight: FontWeight.w700,
         color: Colors.white,
       ),
+    ),
+
+    iconTheme: const IconThemeData(color: textLight),
+
+    bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      backgroundColor: background,
+      selectedItemColor: primaryGreen,
+      unselectedItemColor: textLight,
+      showUnselectedLabels: true,
+      elevation: 8,
+      type: BottomNavigationBarType.fixed,
+    ),
+
+    progressIndicatorTheme: const ProgressIndicatorThemeData(
+      color: primaryGreen,
     ),
     
     elevatedButtonTheme: ElevatedButtonThemeData(
@@ -216,11 +242,11 @@ class AppTheme {
     ),
     
     cardTheme: CardThemeData(
-      color: surfaceLight,
-      elevation: 0,
+      color: cardBg,
+      elevation: 2,
       shadowColor: Colors.black12,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(16),
       ),
       margin: const EdgeInsets.all(8),
     ),
@@ -274,17 +300,18 @@ class AppTheme {
   static ThemeData darkTheme = ThemeData(
     useMaterial3: true,
     brightness: Brightness.dark,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: primaryGreen,
+    colorScheme: ColorScheme(
       brightness: Brightness.dark,
-    ).copyWith(
       primary: primaryGreen,
+      onPrimary: Colors.white,
       secondary: secondaryGreen,
-      tertiary: accentBlue,
-      surface: surfaceDark,
-      onSurface: textPrimaryDark,
+      onSecondary: Colors.white,
+      error: stepsOrange,
+      onError: Colors.white,
       background: backgroundDark,
       onBackground: textPrimaryDark,
+      surface: surfaceDark,
+      onSurface: textPrimaryDark,
     ),
     scaffoldBackgroundColor: backgroundDark,
     
@@ -385,9 +412,24 @@ class AppTheme {
       iconTheme: const IconThemeData(color: Colors.white),
       titleTextStyle: GoogleFonts.inter(
         fontSize: 22,
-        fontWeight: FontWeight.w400,
+        fontWeight: FontWeight.w700,
         color: Colors.white,
       ),
+    ),
+
+    iconTheme: const IconThemeData(color: textLightDark),
+
+    bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      backgroundColor: backgroundDark,
+      selectedItemColor: primaryGreen,
+      unselectedItemColor: textLightDark,
+      showUnselectedLabels: true,
+      elevation: 8,
+      type: BottomNavigationBarType.fixed,
+    ),
+
+    progressIndicatorTheme: const ProgressIndicatorThemeData(
+      color: primaryGreen,
     ),
     
     elevatedButtonTheme: ElevatedButtonThemeData(

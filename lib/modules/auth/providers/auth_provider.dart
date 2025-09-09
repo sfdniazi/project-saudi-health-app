@@ -5,6 +5,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../models/auth_user_model.dart';
 import '../models/auth_state_model.dart';
+import '../../../core/security_middleware.dart';
 
 class AuthProvider with ChangeNotifier {
   // Private fields
@@ -50,7 +51,9 @@ class AuthProvider with ChangeNotifier {
       final connectivityResult = await Connectivity().checkConnectivity();
       return connectivityResult != ConnectivityResult.none;
     } catch (e) {
-      return false;
+      // If connectivity check fails, assume connection exists to avoid false negatives
+      debugPrint('Connectivity check failed: $e');
+      return true; // Don't block auth attempts if connectivity plugin fails
     }
   }
 
@@ -58,6 +61,22 @@ class AuthProvider with ChangeNotifier {
   Future<void> signInWithEmailAndPassword(String email, String password) async {
     try {
       _setAuthState(AuthStateModel.loading());
+      
+      // Security: Rate limiting check
+      if (SecurityMiddleware.isRateLimited(email)) {
+        SecurityMiddleware.logSecurityEvent('RATE_LIMITED_LOGIN', {'email': email});
+        throw Exception('Too many login attempts. Please wait before trying again.');
+      }
+      
+      // Record authentication attempt
+      SecurityMiddleware.recordAuthAttempt(email);
+      
+      // Security: Check device integrity
+      final isDeviceCompromised = await SecurityMiddleware.isDeviceCompromised();
+      if (isDeviceCompromised) {
+        SecurityMiddleware.logSecurityEvent('COMPROMISED_DEVICE_LOGIN', {'email': email});
+        throw Exception('Security risk detected. Please use a secure device.');
+      }
 
       // Check connectivity
       final hasConnection = await _checkConnectivity();
@@ -92,7 +111,8 @@ class AuthProvider with ChangeNotifier {
       String message = _getFirebaseAuthErrorMessage(e);
       _setAuthState(AuthStateModel.error(message));
     } catch (e) {
-      _setAuthState(AuthStateModel.error(e.toString()));
+      debugPrint('Login error: $e');
+      _setAuthState(AuthStateModel.error('Login failed. Please check your credentials and try again.'));
     }
   }
 
@@ -158,7 +178,8 @@ class AuthProvider with ChangeNotifier {
       String message = _getFirebaseAuthErrorMessage(e);
       _setAuthState(AuthStateModel.error(message));
     } catch (e) {
-      _setAuthState(AuthStateModel.error(e.toString()));
+      debugPrint('Signup error: $e');
+      _setAuthState(AuthStateModel.error('Account creation failed. Please try again.'));
     }
   }
 
@@ -189,7 +210,8 @@ class AuthProvider with ChangeNotifier {
       String message = _getFirebaseAuthErrorMessage(e);
       _setAuthState(AuthStateModel.error(message));
     } catch (e) {
-      _setAuthState(AuthStateModel.error(e.toString()));
+      debugPrint('Password reset error: $e');
+      _setAuthState(AuthStateModel.error('Password reset failed. Please try again.'));
     }
   }
 

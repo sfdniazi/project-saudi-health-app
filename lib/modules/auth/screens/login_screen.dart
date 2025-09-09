@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/app_theme.dart';
-import '../../../presentation/navigation/main_navigation.dart';
 import '../providers/auth_provider.dart';
 import 'signup_screen.dart';
 
@@ -52,16 +51,18 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   }
 
   void _handleAuthStateChange(AuthProvider authProvider) {
-    // Navigate to main screen when authenticated
+    // Success: RootScreen will automatically navigate when Firebase auth changes
+    // We just show success message and let the auth stream handle navigation
     if (authProvider.isAuthenticated) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const MainNavigation()),
-          );
-        }
-      });
-      return; // Don't show messages when navigating
+      if (authProvider.successMessage != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _showSuccessSnackBar(authProvider.successMessage!);
+            authProvider.clearMessages();
+          }
+        });
+      }
+      return; // RootScreen will handle navigation automatically
     }
 
     // Show error dialog if there's an error
@@ -238,21 +239,14 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                   bottom: mediaQuery.viewInsets.bottom,
                 ),
                 physics: const ClampingScrollPhysics(),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minHeight: mediaQuery.size.height - 
-                        mediaQuery.padding.top - 
-                        mediaQuery.padding.bottom,
-                  ),
-                  child: IntrinsicHeight(
-                    child: Column(
-                      children: [
-                        // Header - Adaptive height
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          height: isKeyboardVisible 
-                              ? 80 // Much smaller height when keyboard is visible
-                              : 280, // Full height when keyboard is hidden
+                child: Column(
+                  children: [
+                    // Header - Adaptive height
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      height: isKeyboardVisible 
+                          ? 80 // Much smaller height when keyboard is visible
+                          : 280, // Full height when keyboard is hidden
                           child: FadeTransition(
                             opacity: _fadeAnimation,
                             child: Padding(
@@ -312,8 +306,8 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                           ),
                         ),
 
-                        // Form section - Flexible height
-                        Flexible(
+                        // Form section - Expanded to fill remaining space
+                        Expanded(
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: AnimatedContainer(
@@ -372,15 +366,15 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                             isPassword: true,
                                             isPasswordVisible: _isPasswordVisible,
                                             onTogglePassword: _togglePasswordVisibility,
-                                            validator: (value) {
-                                              if (value == null || value.isEmpty) {
-                                                return 'Please enter your password';
-                                              }
-                                              if (value.length < 6) {
-                                                return 'Password must be at least 6 characters';
-                                              }
-                                              return null;
-                                            },
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your password';
+                              }
+                              if (value.length < 8) {
+                                return 'Password must be at least 8 characters';
+                              }
+                              return null;
+                            },
                                           ),
                                           const SizedBox(height: 16),
 
@@ -437,10 +431,8 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                             ),
                           ),
                         ),
-                      ],
-                    ),
+                    ],
                   ),
-                ),
               ),
             ),
           );

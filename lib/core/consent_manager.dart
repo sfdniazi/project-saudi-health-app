@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'app_theme.dart';
+import 'pdpl_data_controller.dart';
+import 'audit_logger.dart';
 
 /// ✅ PDPL compliance manager for handling user consent
 class ConsentManager {
@@ -20,6 +22,43 @@ class ConsentManager {
     
     if (hasConsent) {
       await prefs.setString(_consentDateKey, DateTime.now().toIso8601String());
+      // Record granular consents for essential processing by default
+      try {
+        for (final category in DataCategory.values) {
+          await PDPLDataController.recordConsent(
+            category: category,
+            purpose: DataProcessingPurpose.essential,
+            granted: true,
+            legalBasis: 'Consent',
+          );
+        }
+        await AuditLogger.logConsentEvent(
+          PDPLDataController.currentUserId ?? 'unknown',
+          'CONSENT_ACCEPTED',
+          {'globalConsent': true},
+        );
+      } catch (_) {
+        // Failsafe: ignore logging errors
+      }
+    } else {
+      // Withdraw all non-essential consents
+      try {
+        for (final category in DataCategory.values) {
+          for (final purpose in DataProcessingPurpose.values) {
+            if (purpose != DataProcessingPurpose.essential) {
+              await PDPLDataController.withdrawConsent(
+                category: category,
+                purpose: purpose,
+              );
+            }
+          }
+        }
+        await AuditLogger.logConsentEvent(
+          PDPLDataController.currentUserId ?? 'unknown',
+          'CONSENT_WITHDRAWN_GLOBAL',
+          {'globalConsent': false},
+        );
+      } catch (_) {}
     }
   }
 
@@ -226,6 +265,29 @@ class _ConsentDialogState extends State<ConsentDialog> {
                 ),
               ),
             ),
+            
+            // Privacy dashboard link
+            if (_hasScrolledToBottom)
+              Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    TextButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).pop(false);
+                        // This would navigate to privacy dashboard
+                        // Navigator.pushNamed(context, '/privacy-dashboard');
+                      },
+                      icon: const Icon(Icons.settings, size: 16),
+                      label: const Text('Manage Privacy Settings'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppTheme.primaryGreen,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             
             // Action buttons
             Row(
