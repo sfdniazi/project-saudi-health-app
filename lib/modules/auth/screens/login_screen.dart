@@ -313,38 +313,32 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                           ),
                         ),
 
-                        // Form section - Container with proper sizing (Fixed)
-                        Container(
-                          constraints: BoxConstraints(
-                            minHeight: 400,
-                            maxHeight: mediaQuery.size.height * 0.8,
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves.easeOut,
-                              decoration: BoxDecoration(
-                                color: AppTheme.surfaceLight,
-                                borderRadius: BorderRadius.circular(36),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.08),
-                                    blurRadius: 32,
-                                    offset: const Offset(0, -8),
-                                  ),
-                                ],
-                              ),
-                              child: SlideTransition(
-                                position: _slideAnimation,
-                                child: FadeTransition(
-                                  opacity: _fadeAnimation,
+                        // Form section - Flexible container for keyboard
+                        Flexible(
+                          child: Container(
+                            margin: const EdgeInsets.all(16.0),
+                            decoration: BoxDecoration(
+                              color: AppTheme.surfaceLight,
+                              borderRadius: BorderRadius.circular(36),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.08),
+                                  blurRadius: 32,
+                                  offset: const Offset(0, -8),
+                                ),
+                              ],
+                            ),
+                            child: SlideTransition(
+                              position: _slideAnimation,
+                              child: FadeTransition(
+                                opacity: _fadeAnimation,
+                                child: SingleChildScrollView(
                                   child: Padding(
                                     padding: EdgeInsets.fromLTRB(
                                       32, 
                                       isKeyboardVisible ? 24 : 40, 
                                       32, 
-                                      32
+                                      isKeyboardVisible ? 24 : 32
                                     ),
                                     child: Form(
                                       key: _formKey,

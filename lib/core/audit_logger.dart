@@ -95,7 +95,6 @@ class AuditLogEntry {
 /// ✅ Audit Logger - Comprehensive logging system for PDPL compliance
 class AuditLogger {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  static final FirebaseAuth _auth = FirebaseAuth.instance;
   
   // Log retention periods (in days)
   static const int _auditLogRetentionDays = 2555; // 7 years for compliance

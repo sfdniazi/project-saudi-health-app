@@ -319,6 +319,23 @@ class _ActivityScreenWithProviderState extends State<ActivityScreenWithProvider>
                   color: AppTheme.textPrimary,
                 ),
               ),
+              const Spacer(),
+              // Debug button to initialize step counter
+              IconButton(
+                onPressed: () async {
+                  final success = await activityProvider.initializeStepCounter();
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(success ? 'Step counter initialized!' : 'Failed to initialize step counter'),
+                        backgroundColor: success ? Colors.green : Colors.red,
+                      ),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.settings, size: 18),
+                tooltip: 'Initialize Step Counter',
+              ),
             ],
           ),
           const SizedBox(height: 20),
@@ -390,6 +407,46 @@ class _ActivityScreenWithProviderState extends State<ActivityScreenWithProvider>
                 ),
               ),
             ],
+          ),
+          // Debug info (temporary for troubleshooting)
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Debug Info:',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Global Step Counter: ${activityProvider.stepCounterStatus}',
+                  style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                ),
+                Text(
+                  'Pedometer Available: ${activityProvider.isPedometerAvailable}',
+                  style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                ),
+                Text(
+                  'Current Steps: ${activityProvider.currentSteps}',
+                  style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                ),
+                if (activityProvider.hasStepCounterError)
+                  Text(
+                    'Error: ${activityProvider.stepCounterError}',
+                    style: TextStyle(fontSize: 10, color: Colors.red.shade600),
+                  ),
+              ],
+            ),
           ),
         ],
       ),
