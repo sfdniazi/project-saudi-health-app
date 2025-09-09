@@ -6,7 +6,6 @@ import '../providers/ai_recommendations_provider.dart';
 import '../widgets/chat_message_widget.dart';
 import '../widgets/recommendation_card_widget.dart';
 import '../widgets/typing_indicator_widget.dart';
-import '../models/ai_recommendations_state_model.dart';
 import '../../activity/screens/activity_screen_with_provider.dart';
 
 /// AI-powered food and exercise recommendations screen with chatbot interface

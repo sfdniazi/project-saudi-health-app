@@ -9,7 +9,6 @@ import '../providers/home_provider.dart';
 import '../models/home_state_model.dart';
 import '../widgets/home_shimmer_widgets.dart';
 
-import '../../../presentation/widgets/custom_appbar.dart';
 import '../../../core/app_theme.dart';
 import '../../../models/recommendation_model.dart';
 import '../../../models/food_model.dart';

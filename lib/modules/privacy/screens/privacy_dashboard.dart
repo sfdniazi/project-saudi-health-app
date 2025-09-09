@@ -5,7 +5,6 @@ import 'dart:convert';
 
 import '../../../core/app_theme.dart';
 import '../../../core/pdpl_data_controller.dart';
-import '../../../core/audit_logger.dart';
 import '../providers/privacy_provider.dart';
 import '../widgets/consent_management_card.dart';
 import '../widgets/data_export_card.dart';
