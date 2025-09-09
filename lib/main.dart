@@ -8,8 +8,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'firebase_options.dart';
 import 'core/app_theme.dart';
 import 'core/error_handler.dart';
+import 'core/security_middleware.dart';
 import 'presentation/screens/start_page.dart';
-import 'modules/auth/screens/login_screen.dart';
 import 'modules/auth/providers/auth_provider.dart' as custom_auth;
 import 'modules/dashboard/providers/dashboard_provider.dart';
 import 'modules/home/providers/home_provider.dart';
@@ -17,6 +17,7 @@ import 'modules/activity/providers/activity_provider.dart';
 import 'modules/food_logging/providers/food_logging_provider.dart';
 import 'modules/profile/providers/profile_provider.dart';
 import 'modules/ai_recommendations/providers/ai_recommendations_provider.dart';
+import 'modules/privacy/providers/privacy_provider.dart';
 import 'services/global_step_counter_provider.dart';
 import 'presentation/navigation/main_navigation.dart';
 import 'presentation/screens/splash_screen.dart';
@@ -24,14 +25,22 @@ import 'presentation/screens/splash_screen.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Load environment variables
-  await dotenv.load(fileName: ".env");
+  // Load environment variables (development only)
+  // SECURITY: .env should not contain secrets in production
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    // .env file not found - this is expected in production
+    debugPrint('No .env file found: $e');
+  }
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  // Initialize security systems
   ErrorHandler.initialize();
+  SecurityMiddleware.initialize();
   FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
 
   runApp(const NabdAlHayahApp());
@@ -57,6 +66,7 @@ class _NabdAlHayahAppState extends State<NabdAlHayahApp> {
         ChangeNotifierProvider(create: (_) => ProfileProvider()),
         ChangeNotifierProvider(create: (_) => AIRecommendationsProvider()),
         ChangeNotifierProvider(create: (_) => GlobalStepCounterProvider()),
+        ChangeNotifierProvider(create: (_) => PrivacyProvider()),
       ],
       child: MaterialApp(
         title: 'Nabd Al-Hayah',

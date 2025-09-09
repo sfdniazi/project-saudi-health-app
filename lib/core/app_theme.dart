@@ -23,6 +23,10 @@ class AppTheme {
   static const Color textPrimary = Color(0xFF1E1E1E); // PRIMARY_TEXT
   static const Color textSecondary = Color(0xFF6C6C6C); // SECONDARY_TEXT
   static const Color textLight = Color(0xFF828282);
+  static const Color borderColor = Color(0xFFE0E0E0);
+  static const Color backgroundGrey = Color(0xFFF5F5F5);
+  static const Color backgroundLight = Color(0xFFFFFFFF);
+  static const Color errorColor = Color(0xFFE57373);
   
   // Enhanced Dark theme colors for premium luxury feel
   static const Color backgroundDark = Color(0xFF0A0A0A); // Deeper black for premium feel
