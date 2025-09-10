@@ -9,6 +9,33 @@ class TypingIndicatorWidget extends StatefulWidget {
   State<TypingIndicatorWidget> createState() => _TypingIndicatorWidgetState();
 }
 
+class _TypingDot extends StatelessWidget {
+  final Animation<double> animation;
+  
+  const _TypingDot({required this.animation});
+  
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) {
+        return Opacity(
+          opacity: animation.value,
+          child: Container(
+            width: 6,
+            height: 6,
+            margin: const EdgeInsets.only(right: 2),
+            decoration: const BoxDecoration(
+              color: AppTheme.primaryGreen,
+              shape: BoxShape.circle,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _TypingIndicatorWidgetState extends State<TypingIndicatorWidget>
     with TickerProviderStateMixin {
   late AnimationController _controller;
@@ -99,7 +126,7 @@ class _TypingIndicatorWidgetState extends State<TypingIndicatorWidget>
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
+                const Text(
                   'AI is typing',
                   style: TextStyle(
                     fontSize: 14,
@@ -109,27 +136,11 @@ class _TypingIndicatorWidgetState extends State<TypingIndicatorWidget>
                 ),
                 const SizedBox(width: 8),
                 Row(
-                  children: List.generate(3, (index) {
-                    return AnimatedBuilder(
-                      animation: _dotAnimations[index],
-                      builder: (context, child) {
-                        return Container(
-                          margin: const EdgeInsets.only(right: 2),
-                          child: Opacity(
-                            opacity: _dotAnimations[index].value,
-                            child: Container(
-                              width: 6,
-                              height: 6,
-                              decoration: BoxDecoration(
-                                color: AppTheme.primaryGreen,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  }),
+                  children: [
+                    _TypingDot(animation: _dotAnimations[0]),
+                    _TypingDot(animation: _dotAnimations[1]),
+                    _TypingDot(animation: _dotAnimations[2]),
+                  ],
                 ),
               ],
             ),
