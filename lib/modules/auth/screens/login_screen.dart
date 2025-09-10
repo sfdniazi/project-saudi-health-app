@@ -212,89 +212,65 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                       child: IntrinsicHeight(
                         child: Column(
                           children: [
-                            // Header - Flexible header that adapts to available space
-                            FadeTransition(
-                              opacity: _fadeAnimation,
-                              child: Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 32.0,
-                                  vertical: isKeyboardVisible ? 4.0 : 20.0,
-                                ),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    // Show icon only when keyboard is hidden
-                                    if (!isKeyboardVisible) ...[
-                                      Container(
-                                        width: 50,
-                                        height: 50,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white.withValues(alpha: 0.15),
-                                          borderRadius: BorderRadius.circular(16),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withValues(alpha: 0.1),
-                                              blurRadius: 8,
-                                              offset: const Offset(0, 2),
-                                            ),
-                                          ],
-                                        ),
-                                        child: const Icon(
-                                          Icons.favorite,
-                                          size: 24,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 12),
+                            // Optimized Header - Larger logo and text with efficient rendering
+                            RepaintBoundary(
+                              child: FadeTransition(
+                                opacity: _fadeAnimation,
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 24.0,
+                                    vertical: isKeyboardVisible ? 8.0 : 40.0,
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      // Larger logo with better visual presence
+                                      if (!isKeyboardVisible) ...[
+                                        const _LogoWidget(),
+                                        const SizedBox(height: 24),
+                                      ],
+                                      // Larger welcome text
+                                      const _WelcomeTextWidget(),
+                                      if (!isKeyboardVisible) ...[
+                                        const SizedBox(height: 12),
+                                        const _SubtitleWidget(),
+                                      ],
                                     ],
-                                    Text(
-                                      'Welcome Back',
-                                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: isKeyboardVisible ? 18 : 24,
-                                      ),
-                                    ),
-                                    if (!isKeyboardVisible) ...[
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        'Sign in to continue your wellness journey',
-                                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                          color: Colors.white.withValues(alpha: 0.8),
-                                          fontSize: 14,
-                                        ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ],
-                                  ],
+                                  ),
                                 ),
                               ),
                             ),
 
-                            // Form section - Centered container with proper spacing
+                            // Optimized Form section - Prevents unnecessary rebuilds
                             Expanded(
                               child: Center(
-                                child: Container(
-                                  constraints: BoxConstraints(
-                                    maxHeight: isKeyboardVisible ? 400 : double.infinity,
-                                  ),
-                                  margin: EdgeInsets.fromLTRB(
-                                    16.0, 
-                                    isKeyboardVisible ? 8.0 : 24.0, 
-                                    16.0, 
-                                    isKeyboardVisible ? 8.0 : 32.0
-                                  ),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.surfaceLight,
-                                  borderRadius: BorderRadius.circular(24),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.08),
-                                      blurRadius: 16,
-                                      offset: const Offset(0, -4),
+                                child: RepaintBoundary(
+                                  child: Container(
+                                    constraints: BoxConstraints(
+                                      maxHeight: isKeyboardVisible ? 420 : double.infinity,
                                     ),
-                                  ],
-                                ),
+                                    margin: EdgeInsets.fromLTRB(
+                                      16.0, 
+                                      isKeyboardVisible ? 12.0 : 20.0, 
+                                      16.0, 
+                                      isKeyboardVisible ? 12.0 : 24.0
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.surfaceLight,
+                                      borderRadius: BorderRadius.circular(28),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.12),
+                                          blurRadius: 24,
+                                          offset: const Offset(0, -6),
+                                        ),
+                                        BoxShadow(
+                                          color: Colors.white.withValues(alpha: 0.1),
+                                          blurRadius: 1,
+                                          offset: const Offset(0, 1),
+                                        ),
+                                      ],
+                                    ),
                                 child: SlideTransition(
                                   position: _slideAnimation,
                                   child: FadeTransition(
@@ -398,6 +374,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                       ),
                                     ),
                                   ),
+                                  ),
                                 ),
                               ),
                             ),
@@ -427,7 +404,8 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     TextInputType? keyboardType,
     String? Function(String?)? validator,
   }) {
-    return Container(
+    return RepaintBoundary(
+      child: Container(
       decoration: BoxDecoration(
         color: AppTheme.background,
         borderRadius: BorderRadius.circular(16),
@@ -468,7 +446,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
           contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildSubmitButton(bool isLoading) {
@@ -512,6 +490,106 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
             fontSize: 16,
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Optimized logo widget with RepaintBoundary to prevent unnecessary repaints
+class _LogoWidget extends StatelessWidget {
+  const _LogoWidget();
+
+  @override
+  Widget build(BuildContext context) {
+    return RepaintBoundary(
+      child: Hero(
+        tag: 'app_logo',
+        child: Container(
+          width: 80,
+          height: 80,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white.withValues(alpha: 0.25),
+                Colors.white.withValues(alpha: 0.15),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.15),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+              BoxShadow(
+                color: Colors.white.withValues(alpha: 0.1),
+                blurRadius: 4,
+                offset: const Offset(0, -2),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.favorite,
+            size: 36,
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Optimized welcome text widget
+class _WelcomeTextWidget extends StatelessWidget {
+  const _WelcomeTextWidget();
+
+  @override
+  Widget build(BuildContext context) {
+    final MediaQueryData mediaQuery = MediaQuery.of(context);
+    final bool isKeyboardVisible = mediaQuery.viewInsets.bottom > 0;
+    
+    return RepaintBoundary(
+      child: Text(
+        'Welcome Back',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w800,
+          fontSize: isKeyboardVisible ? 20 : 32,
+          letterSpacing: -0.5,
+          height: 1.1,
+          shadows: [
+            Shadow(
+              color: Colors.black.withValues(alpha: 0.3),
+              offset: const Offset(0, 2),
+              blurRadius: 4,
+            ),
+          ],
+        ),
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+}
+
+/// Optimized subtitle widget
+class _SubtitleWidget extends StatelessWidget {
+  const _SubtitleWidget();
+
+  @override
+  Widget build(BuildContext context) {
+    return RepaintBoundary(
+      child: Text(
+        'Sign in to continue your wellness journey',
+        style: TextStyle(
+          color: Colors.white.withValues(alpha: 0.85),
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          height: 1.3,
+          letterSpacing: 0.2,
+        ),
+        textAlign: TextAlign.center,
       ),
     );
   }
