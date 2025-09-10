@@ -1,16 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:crypto/crypto.dart';
 import 'dart:convert';
-import 'dart:io';
+import 'dart:async';
+import 'package:crypto/crypto.dart';
 
 import '../services/firebase_service.dart';
-import '../models/user_model.dart';
-import '../models/activity_model.dart';
-import '../models/food_model.dart';
-import '../models/hydration_model.dart';
 import 'audit_logger.dart';
 
 /// Data processing purposes for granular consent

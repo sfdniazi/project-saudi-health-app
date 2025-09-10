@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'app_theme.dart';
+import 'pdpl_compliance_manager.dart';
 import 'pdpl_data_controller.dart';
 import 'audit_logger.dart';
 
@@ -22,7 +24,16 @@ class ConsentManager {
     
     if (hasConsent) {
       await prefs.setString(_consentDateKey, DateTime.now().toIso8601String());
-      // Record granular consents for essential processing by default
+      
+      // Initialize PDPL consents for authenticated users
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        // Set essential consents as granted
+        await PDPLComplianceManager.updateUserConsent(user.uid, 'authentication', true);
+        await PDPLComplianceManager.updateUserConsent(user.uid, 'health_tracking', hasConsent);
+      }
+      
+      // Record consent for all data categories
       try {
         for (final category in DataCategory.values) {
           await PDPLDataController.recordConsent(

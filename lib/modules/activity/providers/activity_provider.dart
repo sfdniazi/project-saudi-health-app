@@ -52,9 +52,21 @@ class ActivityProvider with ChangeNotifier {
 
   // Data getters - prioritize global step counter when available
   int get currentSteps {
+    // First try global step counter (pedometer + manual)
     if (_globalStepCounter != null && _globalStepCounter!.isInitialized) {
-      return _globalStepCounter!.primarySteps;
+      final globalSteps = _globalStepCounter!.totalSteps;
+      if (globalSteps > 0) {
+        return globalSteps;
+      }
     }
+    
+    // Fallback to Firebase activity data
+    final firebaseSteps = _activityState.activityData?.steps ?? 0;
+    if (firebaseSteps > 0) {
+      return firebaseSteps;
+    }
+    
+    // Final fallback to activity state
     return _activityState.currentSteps;
   }
   
@@ -98,6 +110,9 @@ class ActivityProvider with ChangeNotifier {
       // Set up connectivity listener
       _setupConnectivityListener();
       
+      // Initialize global step counter if not already connected
+      await _initializeStepCounterIfNeeded();
+      
       // Load initial data
       await _loadInitialData();
       
@@ -121,6 +136,33 @@ class ActivityProvider with ChangeNotifier {
   void _setActivityState(ActivityStateModel newState) {
     _activityState = newState;
     notifyListeners();
+  }
+
+  /// Initialize global step counter if not already connected
+  Future<void> _initializeStepCounterIfNeeded() async {
+    if (_globalStepCounter == null) {
+      developer.log('ActivityProvider: Global step counter not set, trying to initialize...', name: 'ActivityProvider');
+      
+      try {
+        // Try to get instance from context - might fail if not in widget context
+        final globalStepCounter = GlobalStepCounterProvider();
+        await globalStepCounter.initialize();
+        setGlobalStepCounter(globalStepCounter);
+        
+        developer.log('ActivityProvider: Global step counter initialized successfully', name: 'ActivityProvider');
+      } catch (e) {
+        developer.log('ActivityProvider: Failed to initialize global step counter: $e', name: 'ActivityProvider');
+      }
+    } else if (!_globalStepCounter!.isInitialized) {
+      developer.log('ActivityProvider: Global step counter exists but not initialized, initializing...', name: 'ActivityProvider');
+      
+      try {
+        await _globalStepCounter!.initialize();
+        developer.log('ActivityProvider: Global step counter initialized successfully', name: 'ActivityProvider');
+      } catch (e) {
+        developer.log('ActivityProvider: Failed to initialize global step counter: $e', name: 'ActivityProvider');
+      }
+    }
   }
 
   /// Checks internet connectivity
@@ -528,6 +570,27 @@ class ActivityProvider with ChangeNotifier {
     notifyListeners(); // Trigger UI update with new step data
   }
   
+  /// Manually initialize step counter (for debugging/testing)
+  Future<bool> initializeStepCounter() async {
+    developer.log('ActivityProvider: Manual step counter initialization requested', name: 'ActivityProvider');
+    
+    try {
+      if (_globalStepCounter == null) {
+        final globalStepCounter = GlobalStepCounterProvider();
+        setGlobalStepCounter(globalStepCounter);
+      }
+      
+      final success = await _globalStepCounter!.initialize();
+      developer.log('ActivityProvider: Manual step counter initialization result: $success', name: 'ActivityProvider');
+      
+      notifyListeners(); // Update UI
+      return success;
+    } catch (e) {
+      developer.log('ActivityProvider: Manual step counter initialization failed: $e', name: 'ActivityProvider');
+      return false;
+    }
+  }
+  
   /// Called when global step counter changes
   void _onGlobalStepCounterChanged() {
     // Trigger UI update when step count changes
@@ -573,6 +636,15 @@ class ActivityProvider with ChangeNotifier {
       'state': _activityState.toString(),
       'streamCount': _streamSubscriptions.length,
       'hasRefreshTimer': _refreshTimer?.isActive ?? false,
+      'stepCounterConnected': _globalStepCounter != null,
+      'stepCounterInitialized': _globalStepCounter?.isInitialized ?? false,
+      'pedometerAvailable': _globalStepCounter?.isPedometerAvailable ?? false,
+      'stepCounterListening': _globalStepCounter?.isStepCounterListening ?? false,
+      'currentSteps': currentSteps,
+      'globalPrimarySteps': _globalStepCounter?.primarySteps ?? 0,
+      'globalTotalSteps': _globalStepCounter?.totalSteps ?? 0,
+      'firebaseSteps': _activityState.activityData?.steps ?? 0,
+      'activityStateSteps': _activityState.currentSteps,
     };
   }
 }

@@ -15,9 +15,10 @@ class ChatMessageWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Row(
+    return RepaintBoundary(
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: message.isFromUser 
             ? MainAxisAlignment.end 
@@ -89,11 +90,43 @@ class ChatMessageWidget extends StatelessWidget {
           ],
         ],
       ),
+      ),
     );
   }
 
   /// Build AI avatar widget
   Widget _buildAvatarWidget() {
+    return const _AIAvatar();
+  }
+
+  /// Build user avatar widget
+  Widget _buildUserAvatarWidget() {
+    return const _UserAvatar();
+  }
+
+  /// Format timestamp for display
+  String _formatTime(DateTime timestamp) {
+    final now = DateTime.now();
+    final difference = now.difference(timestamp);
+
+    if (difference.inMinutes < 1) {
+      return 'Just now';
+    } else if (difference.inHours < 1) {
+      return '${difference.inMinutes}m ago';
+    } else if (difference.inDays < 1) {
+      return '${difference.inHours}h ago';
+    } else {
+      return '${timestamp.day}/${timestamp.month}';
+    }
+  }
+}
+
+/// Optimized AI avatar widget
+class _AIAvatar extends StatelessWidget {
+  const _AIAvatar();
+  
+  @override
+  Widget build(BuildContext context) {
     return Container(
       width: 32,
       height: 32,
@@ -115,9 +148,14 @@ class ChatMessageWidget extends StatelessWidget {
       ),
     );
   }
+}
 
-  /// Build user avatar widget
-  Widget _buildUserAvatarWidget() {
+/// Optimized user avatar widget
+class _UserAvatar extends StatelessWidget {
+  const _UserAvatar();
+  
+  @override
+  Widget build(BuildContext context) {
     return Container(
       width: 32,
       height: 32,
@@ -131,21 +169,5 @@ class ChatMessageWidget extends StatelessWidget {
         size: 18,
       ),
     );
-  }
-
-  /// Format timestamp for display
-  String _formatTime(DateTime timestamp) {
-    final now = DateTime.now();
-    final difference = now.difference(timestamp);
-
-    if (difference.inMinutes < 1) {
-      return 'Just now';
-    } else if (difference.inHours < 1) {
-      return '${difference.inMinutes}m ago';
-    } else if (difference.inDays < 1) {
-      return '${difference.inHours}h ago';
-    } else {
-      return '${timestamp.day}/${timestamp.month}';
-    }
   }
 }

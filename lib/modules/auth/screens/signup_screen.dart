@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../../core/app_theme.dart';
-import '../providers/auth_provider.dart';
+import '../providers/auth_provider.dart' as custom_auth;
 import 'login_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -51,7 +52,7 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
 
     // Listen to auth state changes
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final authProvider = Provider.of<custom_auth.AuthProvider>(context, listen: false);
       _listenToAuthChanges(authProvider);
     });
   }
@@ -71,16 +72,7 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
     super.dispose();
   }
 
-  void _listenToAuthChanges(AuthProvider authProvider) {
-    // Success: Show welcome dialog, RootScreen will handle navigation
-    if (authProvider.isAuthenticated) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _showSignupSuccessDialog();
-        }
-      });
-    }
-
+  void _listenToAuthChanges(custom_auth.AuthProvider authProvider) {
     // Show error dialog if there's an error
     if (authProvider.errorMessage != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -106,7 +98,7 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
   Future<void> _createAccount() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final authProvider = Provider.of<custom_auth.AuthProvider>(context, listen: false);
     await authProvider.createUserWithEmailAndPassword(
       email: _emailController.text.trim(),
       password: _passwordController.text.trim(),
@@ -308,11 +300,11 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Consumer<AuthProvider>(
-        builder: (context, authProvider, child) {
+      body: Consumer<custom_auth.AuthProvider>(
+        builder: (context, customAuthProvider, child) {
           // Listen to auth changes
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            _listenToAuthChanges(authProvider);
+            _listenToAuthChanges(customAuthProvider);
           });
 
           return Container(
@@ -352,7 +344,7 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
                             children: [
                               _buildAccountInfoPage(),
                               _buildPersonalInfoPage(),
-                              _buildPhysicalInfoPage(authProvider.isLoading),
+                              _buildPhysicalInfoPage(customAuthProvider.isLoading),
                             ],
                           ),
                         ),

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../modules/auth/screens/login_screen.dart';
-import '../../modules/auth/providers/auth_provider.dart' as custom_auth;
 import '../../modules/dashboard/screens/dashboard_navigation_screen.dart';
 
 class MainNavigationWrapper extends StatelessWidget {
@@ -9,10 +8,11 @@ class MainNavigationWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<custom_auth.AuthProvider>(
-      builder: (context, authProvider, child) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
         // If user is authenticated, show dashboard navigation
-        if (authProvider.isAuthenticated && authProvider.currentUser != null) {
+        if (snapshot.hasData) {
           return const DashboardNavigationScreen();
         }
         

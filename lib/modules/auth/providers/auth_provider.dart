@@ -31,6 +31,9 @@ class AuthProvider with ChangeNotifier {
     // Listen to Firebase auth state changes
     _firebaseAuth.authStateChanges().listen((User? user) {
       if (user != null) {
+        // Immediately set authenticated state when Firebase user exists
+        _setAuthState(AuthStateModel.authenticated());
+        // Then fetch full profile asynchronously
         _fetchUserProfile(user.uid);
       } else {
         _setAuthState(AuthStateModel.unauthenticated());
@@ -101,7 +104,10 @@ class AuthProvider with ChangeNotifier {
       if (user != null) {
         // Fetch or create user profile
         await _fetchOrCreateUserProfile(user);
-        _setAuthState(AuthStateModel.authenticated(
+        // Do NOT manually set authenticated here; rely on Firebase authStateChanges()
+        // End loading state and surface success message only
+        _setAuthState(_authState.copyWith(
+          status: AuthStatus.initial,
           successMessage: 'Welcome back to Nabd Al-Hayah!',
         ));
       } else {
@@ -168,7 +174,10 @@ class AuthProvider with ChangeNotifier {
         await _createUserProfile(userModel);
         _currentUser = userModel;
         
-        _setAuthState(AuthStateModel.authenticated(
+        // Do NOT manually set authenticated here; rely on Firebase authStateChanges()
+        // End loading state and surface success message only
+        _setAuthState(_authState.copyWith(
+          status: AuthStatus.initial,
           successMessage: 'Account created successfully! Welcome to Nabd Al-Hayah!',
         ));
       } else {
@@ -203,7 +212,9 @@ class AuthProvider with ChangeNotifier {
             },
           );
 
-      _setAuthState(AuthStateModel.authenticated(
+      // End loading state and surface success message only
+      _setAuthState(_authState.copyWith(
+        status: AuthStatus.initial,
         successMessage: 'Password reset email sent! Please check your inbox.',
       ));
     } on FirebaseAuthException catch (e) {
