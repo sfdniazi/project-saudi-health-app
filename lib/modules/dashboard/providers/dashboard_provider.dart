@@ -38,11 +38,15 @@ class DashboardProvider with ChangeNotifier {
   }
 
   void _initializeDashboard() {
-    // Set initial state to home page
+    // Set initial state to home page with proper validation
+    _navigationHistory.clear();
+    _navigationHistory.add(DashboardPage.home);
     _setDashboardState(DashboardStateModel.navigating(
       pageIndex: 0,
       page: DashboardPage.home,
+      isBottomNavVisible: true,
     ));
+    debugPrint('Dashboard initialized with home page (index: 0)');
   }
 
   /// Set dashboard state and notify listeners
@@ -53,9 +57,17 @@ class DashboardProvider with ChangeNotifier {
 
   /// Navigate to a specific page by index
   void navigateToPageByIndex(int index) {
-    if (index < 0 || index >= DashboardPage.values.length) {
-      _setDashboardState(DashboardStateModel.error('Invalid page index: $index'));
-      return;
+    debugPrint('Attempting to navigate to page index: $index');
+    
+    // Ensure index is valid
+    if (index < 0) {
+      debugPrint('Invalid negative index $index, defaulting to home (0)');
+      index = 0;
+    }
+    
+    if (index >= DashboardPage.values.length) {
+      debugPrint('Index $index exceeds available pages, defaulting to home (0)');
+      index = 0;
     }
 
     final page = DashboardPage.values[index];

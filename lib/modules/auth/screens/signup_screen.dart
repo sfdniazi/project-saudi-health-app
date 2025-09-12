@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../../core/app_theme.dart';
 import '../providers/auth_provider.dart' as custom_auth;
-import 'login_screen.dart';
+import '../../../presentation/screens/enhanced_login_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -372,7 +372,7 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
             children: [
               IconButton(
                 onPressed: () => Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  MaterialPageRoute(builder: (_) => const EnhancedLoginScreen()),
                 ),
                 icon: const Icon(Icons.arrow_back, color: Colors.white),
               ),

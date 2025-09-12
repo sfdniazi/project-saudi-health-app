@@ -8,7 +8,7 @@ import '../models/dashboard_state_model.dart';
 // Import your existing screens  
 import '../../home/screens/home_screen_with_provider.dart';
 import '../../statistics/screens/statistics_screen.dart';
-import '../../profile/screens/profile_screen_with_provider.dart';
+import '../../profile/screens/profile_screen_beautiful.dart';
 
 import '../../../core/app_theme.dart';
 
@@ -28,7 +28,9 @@ class _DashboardNavigationScreenState extends State<DashboardNavigationScreen>
   @override
   void initState() {
     super.initState();
-    _pageController = PageController();
+    
+    // Initialize page controller with initial page 0
+    _pageController = PageController(initialPage: 0);
     
     // Initialize bottom navigation animation
     _bottomNavAnimationController = AnimationController(
@@ -43,6 +45,26 @@ class _DashboardNavigationScreenState extends State<DashboardNavigationScreen>
       parent: _bottomNavAnimationController,
       curve: Curves.easeInOut,
     ));
+    
+    // Initialize dashboard provider after widget is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final dashboardProvider = Provider.of<DashboardProvider>(context, listen: false);
+      dashboardProvider.navigateToPageByIndex(0); // Ensure we start at home
+      
+      // Add listener to sync PageView with provider state changes
+      dashboardProvider.addListener(() {
+        if (mounted && _pageController.hasClients) {
+          final currentIndex = dashboardProvider.currentPageIndex;
+          if (_pageController.page?.round() != currentIndex) {
+            _pageController.animateToPage(
+              currentIndex,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            );
+          }
+        }
+      });
+    });
     
     // Start animation
     _bottomNavAnimationController.forward();
@@ -65,95 +87,175 @@ class _DashboardNavigationScreenState extends State<DashboardNavigationScreen>
       case DashboardPage.statistics:
         return const StatisticsScreen();
       case DashboardPage.profile:
-        return const ProfileScreenWithProvider();
+        return const ProfileScreenBeautiful();
     }
   }
 
   /// Handle page change from PageView
   void _onPageChanged(int index) {
+    // Validate index bounds
+    if (index < 0 || index >= DashboardPage.values.length) {
+      debugPrint('❌ Invalid index $index for page change, ignoring');
+      return;
+    }
+    
+    debugPrint('🔄 PageView changed to index: $index, page: ${DashboardPage.values[index]}');
     final dashboardProvider = Provider.of<DashboardProvider>(context, listen: false);
     dashboardProvider.navigateToPageByIndex(index);
+    debugPrint('✅ Provider updated from PageView change');
   }
 
   /// Handle bottom navigation tap
   void _onBottomNavTap(int index) {
+    // Validate index bounds
+    if (index < 0 || index >= DashboardPage.values.length) {
+      debugPrint('❌ Invalid index $index for bottom nav tap, ignoring');
+      return;
+    }
+    
+    debugPrint('🔴 Bottom nav tap: index $index, page: ${DashboardPage.values[index]}');
     final dashboardProvider = Provider.of<DashboardProvider>(context, listen: false);
+    
+    debugPrint('🔵 Current provider state - index: ${dashboardProvider.currentPageIndex}, page: ${dashboardProvider.currentPage}');
+    
+    // Update provider state first
     dashboardProvider.navigateToPageByIndex(index);
     
-    // Animate to the page
-    _pageController.animateToPage(
-      index,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
+    debugPrint('🟢 After provider update - index: ${dashboardProvider.currentPageIndex}, page: ${dashboardProvider.currentPage}');
+    
+    // Then animate PageView to the correct page
+    if (_pageController.hasClients) {
+      debugPrint('🟡 Animating PageView to index $index');
+      _pageController.animateToPage(
+        index,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      ).then((_) {
+        debugPrint('🟣 PageView animation completed for index $index');
+      });
+    } else {
+      debugPrint('❌ PageController has no clients');
+    }
   }
 
-  /// Build custom bottom navigation bar
+  /// 🧝 Beautiful bottom navigation matching reference design
   Widget _buildBottomNavigationBar(DashboardProvider dashboardProvider) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.white.withOpacity(0.8),
-            Colors.white,
+    return IntrinsicHeight(
+      child: Container(
+        constraints: const BoxConstraints(
+          maxHeight: 85, // Maximum total height including safe area
+        ),
+        decoration: BoxDecoration(
+          color: AppTheme.cardBackground, // Clean white background
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(AppTheme.radiusXxxl), // 28px
+            topRight: Radius.circular(AppTheme.radiusXxxl),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.shadowColor,
+              blurRadius: 20,
+              offset: const Offset(0, -4),
+              spreadRadius: 0,
+            ),
           ],
-        ),
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(28),
-          topRight: Radius.circular(28),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, -8),
+          border: Border.all(
+            color: AppTheme.borderColor,
+            width: 0.5,
           ),
-        ],
+        ),
+        child: SafeArea(
+          child: Container(
+            height: 68, // Further reduced to 68
+            constraints: const BoxConstraints(
+              maxHeight: 68,
+              minHeight: 60, // Minimum height
+            ),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppTheme.spaceXl,
+              vertical: 4, // Further reduced to 4
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: dashboardProvider.navigationItems.asMap().entries.map((entry) {
+                final index = entry.key;
+                final item = entry.value;
+                final isActive = dashboardProvider.isPageActive(item.page);
+                
+                return _buildNavItem(
+                  item: item,
+                  isActive: isActive,
+                  onTap: () => _onBottomNavTap(index),
+                );
+              }).toList(),
+            ),
+          ),
+        ),
       ),
-      child: ClipRRect(
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(28),
-          topRight: Radius.circular(28),
-        ),
-        child: BottomNavigationBar(
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          currentIndex: dashboardProvider.currentPageIndex,
-          onTap: _onBottomNavTap,
-          selectedItemColor: AppTheme.primaryGreen,
-          unselectedItemColor: Colors.grey[600],
-          selectedFontSize: 12,
-          unselectedFontSize: 10,
-          iconSize: 24,
-          selectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.w600,
+    );
+  }
+  
+  /// 📱 Individual nav item with pill-style active state
+  Widget _buildNavItem({
+    required dynamic item,
+    required bool isActive,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeInOutCubic,
+          padding: const EdgeInsets.symmetric(
+            vertical: 8, // Further reduced padding
+            horizontal: 4, // Further reduced padding
           ),
-          unselectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.w500,
+          decoration: BoxDecoration(
+            color: isActive 
+                ? AppTheme.nabdBlue.withOpacity(0.1) 
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(AppTheme.radiusLg), // Pill shape
           ),
-          items: dashboardProvider.navigationItems.map((item) {
-            final isActive = dashboardProvider.isPageActive(item.page);
-            return BottomNavigationBarItem(
-              icon: AnimatedContainer(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Icon with smooth transition
+              AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: isActive 
-                    ? AppTheme.primaryGreen.withOpacity(0.1) 
-                    : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
-                ),
                 child: Icon(
                   isActive ? item.activeIcon : item.icon,
-                  color: isActive ? AppTheme.primaryGreen : Colors.grey[600],
+                  color: isActive ? AppTheme.nabdBlue : AppTheme.textTertiary,
+                  size: 22, // Reduced from 24 to 22
                 ),
               ),
-              label: item.label,
-            );
-          }).toList(),
+              
+              const SizedBox(height: 2), // Further reduced spacing
+              
+              // Label with color transition and proper overflow handling
+              AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 200),
+                style: TextStyle(
+                  color: isActive ? AppTheme.nabdBlue : AppTheme.textTertiary,
+                  fontSize: 10, // Reduced font size
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                ),
+                child: SizedBox(
+                  height: 12, // Further reduced height
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      item.label,
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -173,7 +275,7 @@ class _DashboardNavigationScreenState extends State<DashboardNavigationScreen>
             ),
           );
         },
-        backgroundColor: AppTheme.primaryGreen,
+        backgroundColor: AppTheme.nabdBlue,
         foregroundColor: Colors.white,
         elevation: 8,
         highlightElevation: 12,
@@ -257,15 +359,22 @@ class _DashboardNavigationScreenState extends State<DashboardNavigationScreen>
             // Main body with Stack for overlays
             body: Stack(
               children: [
-                PageView.builder(
-                  controller: _pageController,
-                  onPageChanged: _onPageChanged,
-                  itemCount: DashboardPage.values.length,
-                  itemBuilder: (context, index) {
-                    final page = DashboardPage.values[index];
-                    return AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
-                      child: _getPageWidget(page),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SizedBox(
+                      height: constraints.maxHeight,
+                      child: PageView.builder(
+                        controller: _pageController,
+                        onPageChanged: _onPageChanged,
+                        itemCount: DashboardPage.values.length,
+                        itemBuilder: (context, index) {
+                          final page = DashboardPage.values[index];
+                          return AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 300),
+                            child: _getPageWidget(page),
+                          );
+                        },
+                      ),
                     );
                   },
                 ),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../modules/auth/screens/login_screen.dart';
+import '../screens/enhanced_login_screen.dart';
 import '../../modules/dashboard/screens/dashboard_navigation_screen.dart';
 
 class MainNavigationWrapper extends StatelessWidget {
@@ -17,7 +17,7 @@ class MainNavigationWrapper extends StatelessWidget {
         }
         
         // Otherwise, show login screen
-        return const LoginScreen();
+        return const EnhancedLoginScreen();
       },
     );
   }
