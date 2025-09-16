@@ -10,12 +10,17 @@ import '../models/home_state_model.dart';
 import '../widgets/home_shimmer_widgets.dart';
 
 import '../../../core/app_theme.dart';
+import '../../../presentation/design_system/components/nabd_card.dart';
+import '../../../presentation/design_system/components/progress_ring.dart';
+import '../../../presentation/design_system/components/mood_picker.dart';
+import '../../water_tracking/screens/water_tracking_screen.dart';
 import '../../../models/recommendation_model.dart';
 import '../../../models/food_model.dart';
 
 // Import screens for navigation
 import '../../activity/screens/activity_screen_with_provider.dart';
 import '../../ai_recommendations/screens/ai_recommendations_screen_with_provider.dart';
+import '../../daily_tasks/screens/daily_tasks_screen.dart';
 
 class HomeScreenWithProvider extends StatefulWidget {
   const HomeScreenWithProvider({super.key});
@@ -163,33 +168,38 @@ class _HomeScreenWithProviderState extends State<HomeScreenWithProvider>
                   // Header row (avatar, greeting, actions) - replaces gradient app bar
                   SafeArea(bottom: false, child: _buildGreetingHeaderRow(homeProvider)),
 
-                  // Main content
+                  // Main content - Beautiful new design
                   Expanded(
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(20),
+                      physics: const BouncingScrollPhysics(),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Weekly Progress Highlight
-                          _buildWeeklyProgressCard(homeProvider),
-                          const SizedBox(height: 16),
-
-                          // Steps and Water tiles
-                          _buildTwoStatTiles(homeProvider),
-                          const SizedBox(height: 16),
-
-                          // Calendar strip
-                          _buildCalendarStrip(),
-                          const SizedBox(height: 16),
-
-                          // Meals short list
-                          _buildMealsShortList(homeProvider),
-                          const SizedBox(height: 20),
-
-                          // Keep Quick Actions and AI sections for feature parity
-                          _buildQuickActionsSection(homeProvider),
-                          const SizedBox(height: 20),
-                          _buildAIRecommendationsSection(homeProvider),
+                          const SizedBox(height: AppTheme.spaceLg),
+                          
+                          // Mood tracking section
+                          _buildMoodSection(homeProvider),
+                          const SizedBox(height: AppTheme.spaceXl),
+                          
+                          // Insight banner (like "daily tip")
+                          _buildInsightBanner(),
+                          const SizedBox(height: AppTheme.spaceXl),
+                          
+                          // Today's status section
+                          _buildTodaysStatus(homeProvider),
+                          const SizedBox(height: AppTheme.spaceXl),
+                          
+                          // Activity overview (matching sleep analysis card)
+                          _buildActivityOverview(homeProvider),
+                          const SizedBox(height: AppTheme.spaceXl),
+                          
+                          // Daily tasks section
+                          _buildDailyTasks(homeProvider),
+                          const SizedBox(height: AppTheme.spaceXl),
+                          
+                          // AI Recommendations section
+                          _buildAIRecommendationsPreview(homeProvider),
+                          const SizedBox(height: 100), // Extra padding for bottom nav
                         ],
                       ),
                     ),
@@ -277,42 +287,67 @@ class _HomeScreenWithProviderState extends State<HomeScreenWithProvider>
     );
   }
 
+  /// 🎨 Beautiful header matching the reference design
   Widget _buildGreetingHeaderRow(HomeProvider homeProvider) {
     final displayName = (homeProvider.userProfile?.displayName ?? 'User').trim();
+    final firstName = displayName.split(' ').first;
+    
     return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+      color: AppTheme.background,
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.spaceLg, 
+        AppTheme.spaceLg, 
+        AppTheme.spaceLg, 
+        AppTheme.spaceSm
+      ),
       child: Row(
         children: [
-          // Avatar
+          // Beautiful circular avatar
           Container(
-            width: 44,
-            height: 44,
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
-              color: AppTheme.cardBg,
+              gradient: LinearGradient(
+                colors: [AppTheme.nabdBlue, AppTheme.nabdPurple],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.nabdBlue.withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
-            child: const Icon(Icons.person, color: AppTheme.textLight),
+            child: const Icon(
+              Icons.person, 
+              color: Colors.white, 
+              size: 24
+            ),
           ),
-          const SizedBox(width: 12),
-          // Greeting and name
+          const SizedBox(width: AppTheme.spaceMd),
+          
+          // Welcome text
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Good morning!',
-                  style: const TextStyle(
+                  'Welcome back,',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: AppTheme.textSecondary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
+                    fontSize: AppTheme.fontSizeMd,
+                    fontWeight: FontWeight.w400,
                   ),
                 ),
+                const SizedBox(height: 2),
                 Text(
-                  displayName,
-                  style: const TextStyle(
+                  firstName,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     color: AppTheme.textPrimary,
-                    fontSize: 18,
+                    fontSize: AppTheme.fontSizeXxl,
                     fontWeight: FontWeight.w700,
                   ),
                   overflow: TextOverflow.ellipsis,
@@ -320,19 +355,47 @@ class _HomeScreenWithProviderState extends State<HomeScreenWithProvider>
               ],
             ),
           ),
-          // Calendar button
-          _buildRoundIconButton(Icons.calendar_month, onTap: () {
-            setState(() => _calendarFocusDate = DateTime.now());
-          }),
-          const SizedBox(width: 8),
-          // Notification button
-          _buildRoundIconButton(
-            homeProvider.notificationsEnabled
-                ? Icons.notifications_active
-                : Icons.notifications_none,
-            onTap: () => _showNotificationSettings(homeProvider),
+          
+          // Notification bell
+          _buildNotificationButton(homeProvider),
+        ],
+      ),
+    );
+  }
+  
+  /// 🔔 Notification bell button
+  Widget _buildNotificationButton(HomeProvider homeProvider) {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: AppTheme.cardBackground,
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: AppTheme.borderColor,
+          width: 0.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.shadowColor,
+            blurRadius: 4,
+            offset: const Offset(0, 1),
           ),
         ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () => _showNotificationSettings(homeProvider),
+          child: Icon(
+            homeProvider.notificationsEnabled
+                ? Icons.notifications
+                : Icons.notifications_none,
+            color: AppTheme.textPrimary,
+            size: 20,
+          ),
+        ),
       ),
     );
   }
@@ -1229,6 +1292,650 @@ class _HomeScreenWithProviderState extends State<HomeScreenWithProvider>
               fontWeight: FontWeight.w600,
               color: AppTheme.primaryGreen,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  /// 😊 Beautiful mood tracking section
+  Widget _buildMoodSection(HomeProvider homeProvider) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.spaceLg),
+      child: NabdCard.section(
+        child: MoodPicker(
+          title: 'How are you feeling about your health today?',
+          selectedMood: null, // TODO: Connect to mood state
+          onMoodSelected: (mood) {
+            // TODO: Handle mood selection
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Feeling ${mood.label.toLowerCase()}'),
+                backgroundColor: mood.color,
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+  
+  /// 💡 Insight banner (daily tip)
+  Widget _buildInsightBanner() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.spaceLg),
+      child: NabdCard(
+        backgroundColor: AppTheme.nabdYellow.withOpacity(0.1),
+        hasBorder: true,
+        padding: const EdgeInsets.all(AppTheme.spaceXl),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppTheme.nabdYellow.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(
+                Icons.lightbulb_outline,
+                color: AppTheme.nabdYellow.withOpacity(0.8),
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: AppTheme.spaceMd),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Insight',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: AppTheme.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: AppTheme.spaceSm),
+                  Text(
+                    'Stay hydrated! Drinking water before meals can help with portion control.',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              onPressed: () {},
+              icon: const Icon(
+                Icons.close,
+                color: AppTheme.textTertiary,
+                size: 18,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  /// 📊 Today's status section (Food & Water)
+  Widget _buildTodaysStatus(HomeProvider homeProvider) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppTheme.spaceLg),
+          child: Text(
+            'Today\'s status',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              color: AppTheme.textPrimary,
+              fontWeight: FontWeight.w700,
+              fontSize: AppTheme.fontSizeXl,
+            ),
+          ),
+        ),
+        const SizedBox(height: AppTheme.spaceLg),
+        
+        Row(
+          children: [
+            // Food card
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(left: AppTheme.spaceLg, right: AppTheme.spaceSm),
+                child: _buildStatusCard(
+                  title: 'Food',
+                  value: '1185 of 2400 cals consumed',
+                  progress: homeProvider.caloriesProgress,
+                  color: AppTheme.nabdGreen,
+                  icon: Icons.restaurant,
+                ),
+              ),
+            ),
+            
+            // Water card
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(left: AppTheme.spaceSm, right: AppTheme.spaceLg),
+                child: _buildStatusCard(
+                  title: 'Water',
+                  value: 'You drank 4 out of 6 glasses of water',
+                  progress: homeProvider.waterProgress,
+                  color: AppTheme.nabdBlue,
+                  icon: Icons.water_drop,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const WaterTrackingScreen(),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+  
+  /// 📊 Status card helper
+  Widget _buildStatusCard({
+    required String title,
+    required String value,
+    required double progress,
+    required Color color,
+    required IconData icon,
+    VoidCallback? onTap,
+  }) {
+    final percentage = (progress * 100).round();
+    
+    return NabdCard.stat(
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header with icon
+          Row(
+            children: [
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(
+                  icon,
+                  color: color,
+                  size: 14,
+                ),
+              ),
+              const SizedBox(width: AppTheme.spaceSm),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: AppTheme.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppTheme.spaceXl),
+          
+          // Progress ring
+          Center(
+            child: ProgressRing.goal(
+              progress: progress,
+              title: '$percentage%',
+              color: color,
+              onTap: () {
+                // TODO: Navigate to detailed view
+              },
+            ),
+          ),
+          const SizedBox(height: AppTheme.spaceLg),
+          
+          // Description text
+          Text(
+            value,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppTheme.textSecondary,
+              fontSize: AppTheme.fontSizeSm,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+  
+  /// 📈 Activity overview card (like sleep analysis)
+  Widget _buildActivityOverview(HomeProvider homeProvider) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.spaceLg),
+      child: NabdCard.section(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppTheme.nabdPurple.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Icon(
+                    Icons.assessment_outlined,
+                    color: AppTheme.nabdPurple,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: AppTheme.spaceMd),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Nutrition Assessment',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: AppTheme.textPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        'Your nutrition is on track for today',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppTheme.spaceXl),
+            
+            // Assessment score (like sleep score)
+            Center(
+              child: ProgressRing.assessment(
+                score: 85,
+                maxScore: 100,
+                subtitle: 'Nutrition Score',
+                color: AppTheme.nabdGreen,
+              ),
+            ),
+            const SizedBox(height: AppTheme.spaceLg),
+            
+            Text(
+              'You\'re doing great! Keep up the balanced nutrition.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppTheme.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  /// ✅ Daily tasks section
+  Widget _buildDailyTasks(HomeProvider homeProvider) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: AppTheme.spaceLg),
+              child: Text(
+                'Your daily task',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: AppTheme.textPrimary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: AppTheme.fontSizeXl,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(right: AppTheme.spaceLg),
+              child: TextButton(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const DailyTasksScreen()),
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      'View all',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.nabdBlue,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(
+                      Icons.arrow_forward_rounded,
+                      size: 16,
+                      color: AppTheme.nabdBlue,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppTheme.spaceLg),
+        
+        // Task completion text
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppTheme.spaceLg),
+          child: Text(
+            '3/4 completed',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppTheme.textSecondary,
+            ),
+          ),
+        ),
+        const SizedBox(height: AppTheme.spaceLg),
+        
+        // Tasks grid (2x2)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppTheme.spaceLg),
+          child: GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 2,
+            crossAxisSpacing: AppTheme.spaceMd,
+            mainAxisSpacing: AppTheme.spaceMd,
+            childAspectRatio: 1.0,
+            children: [
+              _buildTaskCard(
+                title: 'Water intake',
+                subtitle: 'Drink 8 glasses',
+                isCompleted: true,
+                icon: Icons.water_drop,
+                color: AppTheme.nabdBlue,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const WaterTrackingScreen()),
+                ),
+              ),
+              _buildTaskCard(
+                title: 'Meal logging',
+                subtitle: 'Log 3 meals',
+                isCompleted: true,
+                icon: Icons.restaurant,
+                color: AppTheme.nabdGreen,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const FoodLoggingScreenWithProvider()),
+                ),
+              ),
+              _buildTaskCard(
+                title: 'Exercise',
+                subtitle: '30 min workout',
+                isCompleted: true,
+                icon: Icons.fitness_center,
+                color: AppTheme.nabdOrange,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ActivityScreenWithProvider()),
+                ),
+              ),
+              _buildTaskCard(
+                title: 'Daily Tasks',
+                subtitle: 'Track your progress',
+                isCompleted: false,
+                icon: Icons.checklist,
+                color: AppTheme.nabdPurple,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const DailyTasksScreen()),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+  
+  /// ✅ Task card widget
+  Widget _buildTaskCard({
+    required String title,
+    required String subtitle,
+    required bool isCompleted,
+    required IconData icon,
+    required Color color,
+    VoidCallback? onTap,
+  }) {
+    return NabdCard(
+      padding: const EdgeInsets.all(AppTheme.spaceLg),
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Icon and completion status
+          Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(
+                  icon,
+                  color: color,
+                  size: 18,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                width: 20,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: isCompleted ? AppTheme.nabdGreen : AppTheme.borderColor,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: isCompleted
+                    ? const Icon(
+                        Icons.check,
+                        color: Colors.white,
+                        size: 14,
+                      )
+                    : null,
+              ),
+            ],
+          ),
+          const Spacer(),
+          
+          // Task info
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: AppTheme.textPrimary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: AppTheme.spaceSm),
+          Text(
+            subtitle,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppTheme.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  /// 🤖 AI Recommendations preview section
+  Widget _buildAIRecommendationsPreview(HomeProvider homeProvider) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppTheme.spaceLg),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    'AI Recommendations',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: AppTheme.textPrimary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: AppTheme.fontSizeXl,
+                    ),
+                  ),
+                  const SizedBox(width: AppTheme.spaceSm),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppTheme.spaceMd,
+                      vertical: AppTheme.spaceXs,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [AppTheme.nabdBlue, AppTheme.nabdPurple],
+                      ),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                    ),
+                    child: Text(
+                      'AI',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: AppTheme.fontSizeXs,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              TextButton(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AIRecommendationsScreenWithProvider()),
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      'View all',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.nabdBlue,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(
+                      Icons.arrow_forward_rounded,
+                      size: 16,
+                      color: AppTheme.nabdBlue,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppTheme.spaceLg),
+        
+        // AI Preview cards
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppTheme.spaceLg),
+          child: Column(
+            children: [
+              _buildAIPreviewCard(
+                icon: Icons.restaurant_outlined,
+                title: 'Nutrition Tip',
+                content: 'Try adding more protein to your breakfast for sustained energy.',
+                color: AppTheme.nabdGreen,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AIRecommendationsScreenWithProvider()),
+                ),
+              ),
+              const SizedBox(height: AppTheme.spaceMd),
+              _buildAIPreviewCard(
+                icon: Icons.fitness_center_outlined,
+                title: 'Activity Suggestion',
+                content: 'A 10-minute walk after lunch can improve digestion.',
+                color: AppTheme.nabdOrange,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AIRecommendationsScreenWithProvider()),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+  
+  /// 💡 AI preview card
+  Widget _buildAIPreviewCard({
+    required IconData icon,
+    required String title,
+    required String content,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return NabdCard.compact(
+      onTap: onTap,
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Icon(
+              icon,
+              color: color,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: AppTheme.spaceMd),
+          
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: AppTheme.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: AppTheme.spaceXs),
+                Text(
+                  content,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.textSecondary,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          
+          const Icon(
+            Icons.arrow_forward_ios,
+            color: AppTheme.textTertiary,
+            size: 16,
           ),
         ],
       ),

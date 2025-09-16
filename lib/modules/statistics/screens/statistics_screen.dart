@@ -6,6 +6,9 @@ import '../models/statistics_state_model.dart';
 import '../widgets/statistics_shimmer_widgets.dart';
 import '../widgets/statistics_chart_widgets.dart';
 import '../widgets/adaptive_ui_components.dart';
+import '../../../presentation/design_system/components/nabd_card.dart';
+import '../../../presentation/design_system/components/nabd_charts.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 /// Statistics screen with provider pattern and improved UI
 class StatisticsScreen extends StatefulWidget {
@@ -133,6 +136,49 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                     // Latest metrics cards
                     _buildLatestMetricsSection(context, state),
                     
+                    const SizedBox(height: 24),
+                    
+                    // Beautiful mood chart (matching reference)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: NabdCharts.buildMoodChart(
+                        context: context,
+                        weekData: [3.0, 4.0, 2.0, 4.5, 5.0, 3.5, 4.0], // Sample mood data
+                        title: 'Nutrition Satisfaction',
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    // Sleep analysis chart (repurposed for nutrition analysis)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: NabdCharts.buildSleepAnalysisChart(
+                        context: context,
+                        sleepData: [7.5, 8.0, 6.5, 7.0, 8.5, 7.5, 8.0], // Sample sleep data
+                        title: 'Meal Timing Analysis',
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    // Nutrition progress line chart
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: NabdCharts.buildNutritionProgressChart(
+                        context: context,
+                        caloriesData: [
+                          const FlSpot(0, 1800),
+                          const FlSpot(1, 2100),
+                          const FlSpot(2, 1900),
+                          const FlSpot(3, 2200),
+                          const FlSpot(4, 2000),
+                          const FlSpot(5, 1750),
+                          const FlSpot(6, 2150),
+                        ],
+                        proteinData: [],
+                        carbsData: [],
+                        title: 'Weekly Nutrition Progress',
+                      ),
+                    ),
                     const SizedBox(height: 24),
                     
                     // Weekly activity chart

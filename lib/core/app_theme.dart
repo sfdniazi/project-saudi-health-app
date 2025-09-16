@@ -2,42 +2,115 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// ✅ Enhanced Material 3 theme with dark mode support
+/// ✅ Beautiful Nabd Al-Hayah Design System - Inspired by modern health apps
 class AppTheme {
-  // Brand colors for both light and dark themes
-  // Green theme tokens per spec
-  static const Color primaryGreen = Color(0xFFA9E563); // PRIMARY_GREEN
-  static const Color secondaryGreen = Color(0xFF6FCF97); // SECONDARY_GREEN
-  static const Color waterBlue = Color(0xFF2D9CDB); // WATER_BLUE
-  static const Color stepsOrange = Color(0xFFF2994A); // STEPS_ORANGE
-  // Backward-compatible aliases for existing code references
-  static const Color accentBlue = waterBlue; // alias for previous accentBlue
-  static const Color accentOrange = stepsOrange; // alias for previous accentOrange
-  static const Color accentBlack = Color(0xFF1A1A1A);
+  // 🎨 New Nabd Al-Hayah Color Palette (extracted from reference design)
   
-  // Light theme colors
-  static const Color background = Color(0xFFFFFFFF); // MAIN_BACKGROUND kept
-  static const Color surfaceLight = Color(0xFFF8F9FA); // CARD_BG
-  static const Color cardBg = Color(0xFFF8F9FA); // alias
-  static const Color highlightBg = Color(0xFFE9F8E1); // HIGHLIGHT_BG
-  static const Color textPrimary = Color(0xFF1E1E1E); // PRIMARY_TEXT
-  static const Color textSecondary = Color(0xFF6C6C6C); // SECONDARY_TEXT
-  static const Color textLight = Color(0xFF828282);
-  static const Color borderColor = Color(0xFFE0E0E0);
+  // === PRIMARY BRAND COLORS ===
+  static const Color nabdGreen = Color(0xFF58D68D);      // Success/Completed goals
+  static const Color nabdBlue = Color(0xFF5DADE2);       // Water tracking & primary actions  
+  static const Color nabdPurple = Color(0xFF8E7CC3);     // Mental wellbeing
+  static const Color nabdOrange = Color(0xFFFF9F43);     // Energy/Warning states
+  static const Color nabdYellow = Color(0xFFF7DC6F);     // Mood tracking/Happiness
+  
+  // === BACKGROUND & SURFACES ===
+  static const Color background = Color(0xFFFAFAFB);     // Clean app background
+  static const Color cardBackground = Color(0xFFFFFFFF); // Pure white cards
+  static const Color surfaceLight = Color(0xFFF8F9FA);   // Secondary surfaces
+  static const Color cardBg = cardBackground;             // alias for compatibility
+  static const Color backgroundLight = cardBackground;    // alias for compatibility
+  
+  // === TEXT COLORS ===
+  static const Color textPrimary = Color(0xFF2C3E50);    // Main headings
+  static const Color textSecondary = Color(0xFF7F8C8D);  // Secondary text
+  static const Color textTertiary = Color(0xFFBDC3C7);   // Subtle text
+  static const Color textLight = textTertiary;            // alias for compatibility
+  
+  // === SEMANTIC COLORS ===
+  static const Color successGreen = nabdGreen;           // Success states
+  static const Color warningOrange = nabdOrange;         // Warning states  
+  static const Color errorColor = Color(0xFFE74C3C);     // Error states
+  static const Color infoBlue = nabdBlue;                // Info states
+  
+  // === MOOD TRACKING COLORS ===
+  static const Color moodTerrible = Color(0xFFE74C3C);   // Red
+  static const Color moodBad = Color(0xFFFF9F43);        // Orange
+  static const Color moodNeutral = Color(0xFFBDC3C7);    // Gray
+  static const Color moodGood = Color(0xFFF7DC6F);       // Yellow  
+  static const Color moodAwesome = Color(0xFF58D68D);    // Green
+  
+  // === CHART COLORS ===
+  static const Color chartBlue = Color(0xFF74B9FF);      // Primary chart color
+  static const Color chartGreen = Color(0xFF00CEC9);     // Secondary chart color
+  static const Color chartYellow = Color(0xFFFDCB6E);    // Tertiary chart color
+  static const Color chartPurple = Color(0xFDA7DF);      // Quaternary chart color
+  
+  // === BORDERS & DIVIDERS ===
+  static const Color borderColor = Color(0xFFECF0F1);    // Subtle borders
+  static const Color dividerColor = borderColor;         // alias
+  static const Color shadowColor = Color(0x0D000000);    // Soft shadows
+  
+  // === BACKWARD COMPATIBILITY ALIASES ===
+  static const Color primaryGreen = nabdGreen;           // Keep existing references working
+  static const Color secondaryGreen = Color(0xFF6FCF97); 
+  static const Color waterBlue = nabdBlue;               
+  static const Color stepsOrange = nabdOrange;           
+  static const Color accentBlue = nabdBlue;              
+  static const Color accentOrange = nabdOrange;          
+  static const Color accentBlack = Color(0xFF2C3E50);    
+  static const Color highlightBg = Color(0xFFEBF8FF);    // Light blue highlight
   static const Color backgroundGrey = Color(0xFFF5F5F5);
-  static const Color backgroundLight = Color(0xFFFFFFFF);
-  static const Color errorColor = Color(0xFFE57373);
   
-  // Enhanced Dark theme colors for premium luxury feel
-  static const Color backgroundDark = Color(0xFF0A0A0A); // Deeper black for premium feel
-  static const Color surfaceDark = Color(0xFF1C1C1E); // iOS-inspired dark surface
-  static const Color surfaceDarkElevated = Color(0xFF2C2C2E); // Elevated surfaces
-  static const Color surfaceDarkCard = Color(0xFF1F1F23); // Cards with subtle elevation
-  static const Color textPrimaryDark = Color(0xFFFAFAFA); // Pure white for primary text
-  static const Color textSecondaryDark = Color(0xFFE1E1E6); // Slightly dimmed for secondary
-  static const Color textLightDark = Color(0xFFA1A1AA); // Muted for tertiary text
-  static const Color accentDarkGreen = Color(0xFF00D4AA); // Brighter green for dark mode
-  static const Color dividerDark = Color(0xFF3A3A3C); // Subtle dividers
+  // === DARK THEME COLORS ===
+  static const Color backgroundDark = Color(0xFF1A1A1A);       // Rich dark background
+  static const Color cardBackgroundDark = Color(0xFF2D2D30);   // Dark cards
+  static const Color surfaceDark = Color(0xFF2D2D30);          // Dark surfaces
+  static const Color surfaceDarkElevated = Color(0xFF3E3E42);  // Elevated dark surfaces
+  static const Color surfaceDarkCard = cardBackgroundDark;     // alias
+  static const Color textPrimaryDark = Color(0xFFFAFAFA);      // Pure white text
+  static const Color textSecondaryDark = Color(0xFFE1E1E6);    // Dimmed text
+  static const Color textTertiaryDark = Color(0xFFA1A1AA);     // Subtle dark text
+  static const Color textLightDark = textTertiaryDark;         // alias
+  static const Color borderColorDark = Color(0xFF3A3A3C);      // Dark borders
+  static const Color dividerDark = borderColorDark;            // alias
+  static const Color shadowColorDark = Color(0x33000000);      // Darker shadows
+  
+  // === DESIGN SYSTEM TOKENS ===
+  
+  // Spacing scale (4px base unit)
+  static const double spaceXs = 4.0;
+  static const double spaceSm = 8.0; 
+  static const double spaceMd = 12.0;
+  static const double spaceLg = 16.0;
+  static const double spaceXl = 20.0;
+  static const double spaceXxl = 24.0;
+  static const double spaceXxxl = 32.0;
+  
+  // Border radius tokens
+  static const double radiusXs = 4.0;
+  static const double radiusSm = 8.0;
+  static const double radiusMd = 12.0;   // Controls, chips
+  static const double radiusLg = 16.0;   // Cards, dialogs
+  static const double radiusXl = 20.0;   // Buttons
+  static const double radiusXxl = 24.0;  // Bottom sheets
+  static const double radiusXxxl = 28.0; // Large containers
+  
+  // Elevation tokens
+  static const double elevationNone = 0.0;
+  static const double elevationSm = 1.0;   // Subtle elevation
+  static const double elevationMd = 2.0;   // Cards
+  static const double elevationLg = 4.0;   // Bottom sheets
+  static const double elevationXl = 8.0;   // FAB, app bar
+  
+  // Typography scale (matching reference design)
+  static const double fontSizeXs = 10.0;
+  static const double fontSizeSm = 12.0;  // Labels, captions
+  static const double fontSizeMd = 14.0;  // Body text
+  static const double fontSizeLg = 16.0;  // Larger body
+  static const double fontSizeXl = 18.0;  // Subtitles
+  static const double fontSizeXxl = 20.0; // Titles
+  static const double fontSizeXxxl = 24.0; // Headings
+  static const double fontSizeDisplay = 32.0; // Large display
 
   // Gradient colors
   static const LinearGradient primaryGradient = LinearGradient(
@@ -58,22 +131,28 @@ class AppTheme {
     colors: [Color(0xFF2D3748), Color(0xFF4A5568)],
   );
 
-  /// ✅ Material 3 Light Theme with enhanced design system
+  /// ✅ Beautiful Nabd Al-Hayah Light Theme
   static ThemeData lightTheme = ThemeData(
     useMaterial3: true,
     brightness: Brightness.light,
     colorScheme: ColorScheme(
       brightness: Brightness.light,
-      primary: primaryGreen,
+      primary: nabdBlue,              // Primary blue for actions
       onPrimary: Colors.white,
-      secondary: secondaryGreen,
+      secondary: nabdGreen,           // Success green
       onSecondary: Colors.white,
-      error: stepsOrange,
+      tertiary: nabdPurple,           // Wellbeing purple
+      onTertiary: Colors.white,
+      error: errorColor,
       onError: Colors.white,
-      background: background,
+      background: background,         // Clean light background
       onBackground: textPrimary,
-      surface: surfaceLight,
+      surface: cardBackground,        // Pure white surfaces
       onSurface: textPrimary,
+      surfaceVariant: surfaceLight,   // Secondary surfaces
+      onSurfaceVariant: textSecondary,
+      outline: borderColor,           // Subtle borders
+      outlineVariant: dividerColor,
     ),
     scaffoldBackgroundColor: background,
     
@@ -181,13 +260,24 @@ class AppTheme {
 
     iconTheme: const IconThemeData(color: textLight),
 
-    bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-      backgroundColor: background,
-      selectedItemColor: primaryGreen,
-      unselectedItemColor: textLight,
+    // 🧝 Beautiful bottom navigation matching reference
+    bottomNavigationBarTheme: BottomNavigationBarThemeData(
+      backgroundColor: cardBackground,          // Clean white background
+      selectedItemColor: nabdBlue,             // Primary blue for active items
+      unselectedItemColor: textTertiary,       // Subtle gray for inactive
       showUnselectedLabels: true,
-      elevation: 8,
+      elevation: elevationLg,                  // Subtle elevation
       type: BottomNavigationBarType.fixed,
+      selectedLabelStyle: GoogleFonts.inter(
+        fontSize: fontSizeSm,                  // 12px labels
+        fontWeight: FontWeight.w600,
+        color: nabdBlue,
+      ),
+      unselectedLabelStyle: GoogleFonts.inter(
+        fontSize: fontSizeSm,
+        fontWeight: FontWeight.w500,
+        color: textTertiary,
+      ),
     ),
 
     progressIndicatorTheme: const ProgressIndicatorThemeData(
@@ -241,14 +331,20 @@ class AppTheme {
       ),
     ),
     
+    // 🎴 Beautiful card theme matching reference design
     cardTheme: CardThemeData(
-      color: cardBg,
-      elevation: 2,
-      shadowColor: Colors.black12,
+      color: cardBackground,                    // Pure white cards
+      elevation: elevationMd,                   // Subtle elevation
+      shadowColor: shadowColor,                 // Soft shadows
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(radiusLg), // 16px rounded corners
+        side: BorderSide(
+          color: borderColor,                     // Subtle border
+          width: 0.5,
+        ),
       ),
-      margin: const EdgeInsets.all(8),
+      margin: EdgeInsets.all(spaceSm),          // 8px margin
+      clipBehavior: Clip.antiAlias,
     ),
     
     chipTheme: ChipThemeData(

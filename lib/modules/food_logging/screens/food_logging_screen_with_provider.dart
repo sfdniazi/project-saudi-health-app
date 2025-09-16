@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/app_theme.dart';
 import '../../../presentation/widgets/custom_appbar.dart';
+import '../../../presentation/design_system/components/nabd_card.dart';
+import '../../../presentation/design_system/components/progress_ring.dart';
 import '../../../services/mlkit_service.dart';
 import '../../../models/food_model.dart';
 import '../providers/food_logging_provider.dart';
@@ -156,7 +158,7 @@ class _FoodLoggingScreenWithProviderState extends State<FoodLoggingScreenWithPro
                 foodLoggingProvider.initialize();
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryGreen,
+                backgroundColor: AppTheme.nabdBlue,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -180,17 +182,25 @@ class _FoodLoggingScreenWithProviderState extends State<FoodLoggingScreenWithPro
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppTheme.surfaceLight,
-          borderRadius: BorderRadius.circular(12),
+          color: AppTheme.cardBackground,
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
           border: Border.all(
-            color: AppTheme.textLight.withOpacity(0.1),
+            color: AppTheme.borderColor,
+            width: 0.5,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.shadowColor,
+              blurRadius: AppTheme.elevationMd,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Row(
           children: [
             Icon(
               Icons.calendar_today,
-              color: AppTheme.primaryGreen,
+              color: AppTheme.nabdBlue,
               size: 20,
             ),
             const SizedBox(width: 12),
