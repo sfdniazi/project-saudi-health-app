@@ -6,7 +6,6 @@ import '../providers/ai_recommendations_provider.dart';
 import '../widgets/chat_message_widget.dart';
 import '../widgets/recommendation_card_widget.dart';
 import '../widgets/typing_indicator_widget.dart';
-import '../models/ai_recommendations_state_model.dart';
 import '../../activity/screens/activity_screen_with_provider.dart';
 
 /// AI-powered food and exercise recommendations screen with chatbot interface
@@ -28,8 +27,14 @@ class _AIRecommendationsScreenState extends State<AIRecommendationsScreen>
   late Animation<double> _fadeAnimation;
   late AnimationController _slideAnimationController;
   late Animation<Offset> _slideAnimation;
+  late FocusNode _messageFocusNode;
   
   bool _showRecommendations = true;
+  bool _isMessageInputVisible = false;
+  
+  // Keys for better widget performance
+  final GlobalKey<AnimatedListState> _chatListKey = GlobalKey<AnimatedListState>();
+  final ValueNotifier<bool> _isTypingNotifier = ValueNotifier<bool>(false);
 
   @override
   void initState() {
@@ -38,6 +43,10 @@ class _AIRecommendationsScreenState extends State<AIRecommendationsScreen>
     _messageController = TextEditingController();
     _chatScrollController = ScrollController();
     _recommendationsScrollController = ScrollController();
+    _messageFocusNode = FocusNode();
+    
+    // Listen to focus changes to manage input visibility
+    _messageFocusNode.addListener(_onFocusChange);
     
     // Set up animations
     _fadeAnimationController = AnimationController(
@@ -66,15 +75,51 @@ class _AIRecommendationsScreenState extends State<AIRecommendationsScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeProvider();
     });
+    
+    // Listen for provider changes to auto-scroll
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = Provider.of<AIRecommendationsProvider>(context, listen: false);
+      provider.addListener(_onProviderChanged);
+    });
+  }
+  
+  void _onFocusChange() {
+    if (mounted) {
+      setState(() {
+        _isMessageInputVisible = _messageFocusNode.hasFocus || !_showRecommendations;
+      });
+    }
+  }
+  
+  void _onProviderChanged() {
+    if (mounted && !_showRecommendations) {
+      // Auto-scroll when new messages are added
+      Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
+    }
+  }
+  
+  bool _shouldShowMessageInput() {
+    return !_showRecommendations || _isMessageInputVisible;
   }
 
   @override
   void dispose() {
+    // Remove provider listener if it exists
+    try {
+      final provider = Provider.of<AIRecommendationsProvider>(context, listen: false);
+      provider.removeListener(_onProviderChanged);
+    } catch (e) {
+      // Provider might not be available anymore
+    }
+    
     _messageController.dispose();
     _chatScrollController.dispose();
     _recommendationsScrollController.dispose();
+    _messageFocusNode.removeListener(_onFocusChange);
+    _messageFocusNode.dispose();
     _fadeAnimationController.dispose();
     _slideAnimationController.dispose();
+    _isTypingNotifier.dispose();
     super.dispose();
   }
 
@@ -85,11 +130,15 @@ class _AIRecommendationsScreenState extends State<AIRecommendationsScreen>
 
   void _scrollToBottom() {
     if (_chatScrollController.hasClients) {
-      _chatScrollController.animateTo(
-        _chatScrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_chatScrollController.hasClients) {
+          _chatScrollController.animateTo(
+            _chatScrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+      });
     }
   }
 
@@ -100,6 +149,7 @@ class _AIRecommendationsScreenState extends State<AIRecommendationsScreen>
     final provider = Provider.of<AIRecommendationsProvider>(context, listen: false);
     provider.sendChatMessage(message);
     _messageController.clear();
+    _isTypingNotifier.value = false;
 
     // Scroll to bottom after a short delay
     Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
@@ -113,57 +163,122 @@ class _AIRecommendationsScreenState extends State<AIRecommendationsScreen>
   void _toggleView() {
     setState(() {
       _showRecommendations = !_showRecommendations;
+      _isMessageInputVisible = !_showRecommendations;
     });
+    
+    // Unfocus when switching to recommendations
+    if (_showRecommendations && _messageFocusNode.hasFocus) {
+      _messageFocusNode.unfocus();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<AIRecommendationsProvider>(
       builder: (context, provider, child) {
+        // Add error snackbar for transient errors
+        if (provider.hasError && provider.errorMessage != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(provider.errorMessage!),
+                  backgroundColor: Colors.red[400],
+                  action: SnackBarAction(
+                    label: 'Dismiss',
+                    textColor: Colors.white,
+                    onPressed: () {
+                      provider.clearError();
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                    },
+                  ),
+                ),
+              );
+            }
+          });
+        }
+        
         return Scaffold(
           backgroundColor: AppTheme.background,
+          resizeToAvoidBottomInset: true,
           
           // Custom app bar with gradient background
           appBar: CustomAppBar(
             title: 'AI Health Assistant',
             actions: [
-              IconButton(
-                icon: Icon(_showRecommendations ? Icons.chat : Icons.lightbulb),
-                onPressed: _toggleView,
-                tooltip: _showRecommendations ? 'Switch to Chat' : 'Switch to Recommendations',
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: IconButton(
+                  key: ValueKey(_showRecommendations),
+                  icon: Icon(_showRecommendations ? Icons.chat : Icons.lightbulb),
+                  onPressed: _toggleView,
+                  tooltip: _showRecommendations ? 'Switch to Chat' : 'Switch to Recommendations',
+                ),
               ),
               if (provider.hasRecommendations)
-                IconButton(
-                  icon: const Icon(Icons.refresh),
-                  onPressed: _refreshRecommendations,
-                  tooltip: 'Refresh Recommendations',
+                AnimatedOpacity(
+                  opacity: provider.isLoadingRecommendations ? 0.5 : 1.0,
+                  duration: const Duration(milliseconds: 300),
+                  child: IconButton(
+                    icon: const Icon(Icons.refresh),
+                    onPressed: provider.isLoadingRecommendations ? null : _refreshRecommendations,
+                    tooltip: 'Refresh Recommendations',
+                  ),
                 ),
             ],
           ),
 
-          body: FadeTransition(
-            opacity: _fadeAnimation,
-            child: SlideTransition(
-              position: _slideAnimation,
-              child: Column(
-                children: [
-                  // View toggle tabs
-                  _buildViewToggleTabs(provider),
-                  
-                  // Main content area
-                  Expanded(
-                    child: _showRecommendations
-                        ? _buildRecommendationsView(provider)
-                        : _buildChatView(provider),
-                  ),
-                  
-                  // Message input (only shown in chat view)
-                  if (!_showRecommendations)
-                    _buildMessageInput(provider),
-                ],
+          body: SafeArea(
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: SlideTransition(
+                position: _slideAnimation,
+                child: Column(
+                  children: [
+                    // View toggle tabs
+                    _buildViewToggleTabs(provider),
+                    
+                    // Main content area with smooth transitions
+                    Expanded(
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 400),
+                        switchInCurve: Curves.easeInOut,
+                        switchOutCurve: Curves.easeInOut,
+                        transitionBuilder: (Widget child, Animation<double> animation) {
+                          return FadeTransition(
+                            opacity: animation,
+                            child: SlideTransition(
+                              position: Tween<Offset>(
+                                begin: const Offset(0.0, 0.1),
+                                end: Offset.zero,
+                              ).animate(animation),
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: _showRecommendations
+                            ? KeyedSubtree(
+                                key: const ValueKey('recommendations'),
+                                child: _buildRecommendationsView(provider),
+                              )
+                            : KeyedSubtree(
+                                key: const ValueKey('chat'),
+                                child: _buildChatView(provider),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
+          
+          // Message input as bottom sheet to prevent overflow
+          bottomSheet: _shouldShowMessageInput() 
+              ? SafeArea(
+                  child: _buildMessageInput(provider),
+                )
+              : null,
         );
       },
     );
@@ -172,7 +287,7 @@ class _AIRecommendationsScreenState extends State<AIRecommendationsScreen>
   /// Build view toggle tabs
   Widget _buildViewToggleTabs(AIRecommendationsProvider provider) {
     return Container(
-      margin: const EdgeInsets.all(16),
+      margin: const EdgeInsets.fromLTRB(12, 16, 12, 16),
       decoration: BoxDecoration(
         color: AppTheme.surfaceLight,
         borderRadius: BorderRadius.circular(12),
@@ -213,40 +328,44 @@ class _AIRecommendationsScreenState extends State<AIRecommendationsScreen>
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
         decoration: BoxDecoration(
           color: isActive ? AppTheme.primaryGreen.withOpacity(0.1) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               icon,
-              size: 20,
+              size: 18,
               color: isActive ? AppTheme.primaryGreen : AppTheme.textSecondary,
             ),
-            const SizedBox(width: 8),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-                color: isActive ? AppTheme.primaryGreen : AppTheme.textSecondary,
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                  color: isActive ? AppTheme.primaryGreen : AppTheme.textSecondary,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-            if (count > 0) ...[
-              const SizedBox(width: 4),
+            if (count > 0 && count < 100) ...[
+              const SizedBox(width: 2),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                 decoration: BoxDecoration(
                   color: isActive ? AppTheme.primaryGreen : AppTheme.textLight,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  count.toString(),
+                  count > 99 ? '99+' : count.toString(),
                   style: const TextStyle(
-                    fontSize: 10,
+                    fontSize: 9,
                     fontWeight: FontWeight.w600,
                     color: Colors.white,
                   ),
@@ -262,18 +381,31 @@ class _AIRecommendationsScreenState extends State<AIRecommendationsScreen>
   /// Build recommendations view
   Widget _buildRecommendationsView(AIRecommendationsProvider provider) {
     if (provider.isLoadingRecommendations) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(color: AppTheme.primaryGreen),
-            SizedBox(height: 16),
-            Text(
+            const CircularProgressIndicator(color: AppTheme.primaryGreen),
+            const SizedBox(height: 16),
+            const Text(
               'Generating personalized recommendations...',
               style: TextStyle(
                 fontSize: 16,
                 color: AppTheme.textSecondary,
               ),
+            ),
+            const SizedBox(height: 24),
+            // Add timeout protection
+            ElevatedButton(
+              onPressed: () {
+                provider.clearError();
+                Navigator.of(context).pop();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.textLight,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Cancel'),
             ),
           ],
         ),
@@ -547,31 +679,26 @@ class _AIRecommendationsScreenState extends State<AIRecommendationsScreen>
 
   /// Build chat view
   Widget _buildChatView(AIRecommendationsProvider provider) {
-    return Column(
-      children: [
-        // Chat messages
-        Expanded(
-          child: provider.chatHistory.isEmpty
-              ? _buildEmptyChatState()
-              : ListView.builder(
-                  controller: _chatScrollController,
-                  padding: const EdgeInsets.all(16),
-                  itemCount: provider.chatHistory.length + (provider.isLoadingChat ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    if (index == provider.chatHistory.length && provider.isLoadingChat) {
-                      return const TypingIndicatorWidget();
-                    }
-                    
-                    final message = provider.chatHistory[index];
-                    return ChatMessageWidget(
-                      message: message,
-                      onTap: message.isFromUser ? null : () => _askFollowUpQuestion(message.content),
-                    );
-                  },
-                ),
-        ),
-      ],
-    );
+    return provider.chatHistory.isEmpty
+        ? _buildEmptyChatState()
+        : ListView.builder(
+            key: const PageStorageKey('chat_list'),
+            controller: _chatScrollController,
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 140), // Further increased bottom padding
+            itemCount: provider.chatHistory.length + (provider.isLoadingChat ? 1 : 0),
+            itemBuilder: (context, index) {
+              if (index == provider.chatHistory.length && provider.isLoadingChat) {
+                return const TypingIndicatorWidget(key: ValueKey('typing_indicator'));
+              }
+              
+              final message = provider.chatHistory[index];
+              return ChatMessageWidget(
+                key: ValueKey(message.id),
+                message: message,
+                onTap: message.isFromUser ? null : () => _askFollowUpQuestion(message.content),
+              );
+            },
+          );
   }
 
   /// Build empty chat state
@@ -656,7 +783,14 @@ class _AIRecommendationsScreenState extends State<AIRecommendationsScreen>
   /// Build message input
   Widget _buildMessageInput(AIRecommendationsProvider provider) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 8,
+        bottom: MediaQuery.of(context).padding.bottom > 0 
+          ? MediaQuery.of(context).padding.bottom + 4
+          : 16,
+      ),
       decoration: BoxDecoration(
         color: AppTheme.surfaceLight,
         boxShadow: [
@@ -667,52 +801,79 @@ class _AIRecommendationsScreenState extends State<AIRecommendationsScreen>
           ),
         ],
       ),
-      child: SafeArea(
-        child: Row(
-          children: [
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppTheme.background,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: AppTheme.textLight.withOpacity(0.2),
-                  ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              constraints: BoxConstraints(
+                minHeight: 44,
+                maxHeight: MediaQuery.of(context).size.height * 0.15, // Max 15% of screen height
+              ),
+              decoration: BoxDecoration(
+                color: AppTheme.background,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: AppTheme.textLight.withOpacity(0.2),
                 ),
-                child: TextField(
-                  controller: _messageController,
-                  decoration: const InputDecoration(
-                    hintText: 'Ask me anything about health...',
-                    hintStyle: TextStyle(
-                      color: AppTheme.textLight,
-                      fontSize: 14,
+              ),
+              child: ValueListenableBuilder<bool>(
+                valueListenable: _isTypingNotifier,
+                builder: (context, isTyping, child) {
+                  return TextField(
+                    controller: _messageController,
+                    focusNode: _messageFocusNode,
+                    maxLines: null,
+                    minLines: 1,
+                    decoration: const InputDecoration(
+                      hintText: 'Ask me anything about health...',
+                      hintStyle: TextStyle(
+                        color: AppTheme.textLight,
+                        fontSize: 14,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     ),
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    textInputAction: TextInputAction.send,
+                    onChanged: (text) {
+                      _isTypingNotifier.value = text.trim().isNotEmpty;
+                    },
+                    onSubmitted: (_) => _sendMessage(),
+                    enabled: !provider.isLoadingChat,
+                  );
+                },
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          ValueListenableBuilder<bool>(
+            valueListenable: _isTypingNotifier,
+            builder: (context, hasText, child) {
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                decoration: BoxDecoration(
+                  gradient: hasText && !provider.isLoadingChat 
+                      ? AppTheme.primaryGradient 
+                      : LinearGradient(
+                          colors: [AppTheme.textLight, AppTheme.textLight],
+                        ),
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  onPressed: provider.isLoadingChat || !hasText ? null : _sendMessage,
+                  icon: Icon(
+                    provider.isLoadingChat 
+                        ? Icons.hourglass_empty 
+                        : hasText 
+                            ? Icons.send 
+                            : Icons.send_outlined,
+                    color: Colors.white,
+                    size: 20,
                   ),
-                  textInputAction: TextInputAction.send,
-                  onSubmitted: (_) => _sendMessage(),
-                  enabled: !provider.isLoadingChat,
                 ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Container(
-              decoration: const BoxDecoration(
-                gradient: AppTheme.primaryGradient,
-                shape: BoxShape.circle,
-              ),
-              child: IconButton(
-                onPressed: provider.isLoadingChat ? null : _sendMessage,
-                icon: Icon(
-                  provider.isLoadingChat ? Icons.hourglass_empty : Icons.send,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
-            ),
-          ],
-        ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -720,8 +881,17 @@ class _AIRecommendationsScreenState extends State<AIRecommendationsScreen>
   /// Ask about a specific recommendation
   void _askAboutRecommendation(String type, String title) {
     _messageController.text = 'Tell me more about this $type recommendation: $title';
-    setState(() => _showRecommendations = false);
-    Future.delayed(const Duration(milliseconds: 100), _sendMessage);
+    setState(() {
+      _showRecommendations = false;
+      _isMessageInputVisible = true;
+    });
+    _isTypingNotifier.value = true;
+    
+    // Focus the input and send message
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _messageFocusNode.requestFocus();
+      Future.delayed(const Duration(milliseconds: 300), _sendMessage);
+    });
   }
 
   /// Ask follow-up question about a response
